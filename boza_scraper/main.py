@@ -1,4 +1,5 @@
 # main.py
+import argparse
 import asyncio
 import difflib
 import hashlib
@@ -28,6 +29,7 @@ except Exception:  # pragma: no cover - optional at runtime
 from config import (
     STATE, MAX_CONCURRENT, CACHE_DIR, OUTPUT_CSV,
     OPENAI_MODEL, GEMINI_MODEL, GEMINI_BASE_URL,
+    HISTORIC_START_YEAR, MAX_DOCS_PER_YEAR, MAX_DOCS_KEEP, MAX_DOCS_SCAN,
 )
 from counties import COUNTIES
 from cache import cache
@@ -384,7 +386,7 @@ def _member_subpages(boza_url, boza_html):
 
 
 # ---------------------------------------------------------------------------
-# PHASE 4: find historical meeting minutes
+# PHASE 4: find historical meeting minutes (incl. year-by-year archives)
 # ---------------------------------------------------------------------------
 MINUTES_PATHS = [
     "/agendas",
@@ -397,7 +399,14 @@ PORTALS = ["legistar.com", "granicus.com", "iqm2.com", "civicplus.com", "civicwe
 DOC_KEYWORDS = ["appointed", "zoning", "bza", "board of zoning appeals"]
 # Hints that a link points at an agenda/minutes listing page worth crawling.
 AGENDA_HINTS = ["agendacenter", "agenda center", "agenda", "minutes"]
-MAX_DOCS_PER_COUNTY = 50
+MAX_DOCS_PER_COUNTY = 120
+
+# CivicPlus AgendaCenter year archive endpoint (works without JS).
+CIVICPLUS_YEAR_PATH = (
+    "/AgendaCenter/UpdateCategoryList?year={year}&month=0&day=0&catID={cat}"
+)
+# Drupal Views year filter used by counties like Colleton on BOZA pages.
+DRUPAL_YEAR_PARAM = "field_meeting_date_value__vc3_content_date_year_offset"
 
 
 def _is_document_link(url, link_text):
@@ -405,6 +414,106 @@ def _is_document_link(url, link_text):
     if "viewfile" in low or url.lower().endswith(".pdf"):
         return True
     return any(portal in url.lower() for portal in PORTALS)
+
+
+def _doc_year(url, link_text=""):
+    """Best-effort year from a CivicPlus ViewFile path or PDF filename."""
+    blob = f"{url} {link_text}"
+    # CivicPlus: /ViewFile/Minutes/_12222020-1595  or  /Agenda/_08252026-2038
+    m = re.search(r"ViewFile/(?:Agenda|Minutes?)/_(\d{2})(\d{2})(20\d{2})", blob, re.I)
+    if m:
+        return int(m.group(3))
+    m = re.search(r"(?:^|[^\d])(20[0-2]\d)(?:[^\d]|$)", blob)
+    return int(m.group(1)) if m else None
+
+
+def _is_minutes_link(url, link_text=""):
+    low = f"{url} {link_text}".lower()
+    return "minute" in low
+
+
+def _civicplus_bza_categories(html):
+    """Return CivicPlus AgendaCenter category IDs whose label looks like a BZA."""
+    if not html:
+        return []
+    cats = []
+    # Checkbox labels: <input name="chkCategoryID" value="6"> Board of Zoning Appeals
+    for m in re.finditer(
+        r'name=["\']chkCategoryID["\'][^>]*value=["\'](\d+)["\'][^>]*>\s*([^<]+)',
+        html,
+        re.I,
+    ):
+        cat_id, label = m.group(1), m.group(2).strip().lower()
+        if "zoning" in label and "appeal" in label:
+            cats.append(cat_id)
+    # Fallback: section headers / changeYear near BZA wording.
+    if not cats:
+        for m in re.finditer(
+            r'(?is)board of zoning appeals.{0,400}?changeYear\(\d+,\s*(\d+)',
+            html,
+        ):
+            cats.append(m.group(1))
+    # Preserve order, unique.
+    seen, out = set(), []
+    for c in cats:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
+def _drupal_year_options(html):
+    """Years listed in a Drupal BOZA meeting-date year filter select."""
+    if not html or DRUPAL_YEAR_PARAM not in html:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    years = []
+    for sel in soup.find_all("select"):
+        name = (sel.get("name") or sel.get("id") or "").lower()
+        if DRUPAL_YEAR_PARAM not in name and "meeting_date" not in name:
+            continue
+        for opt in sel.find_all("option"):
+            val = (opt.get("value") or opt.get_text(strip=True) or "").strip()
+            if re.fullmatch(r"20[0-2]\d", val):
+                years.append(int(val))
+    return sorted(set(years), reverse=True)
+
+
+def _collect_docs_from_html(base, html, seen, assume_bza=False):
+    """Extract (url, link_text, year, is_minutes) docs from a listing page."""
+    docs = []
+    if not html:
+        return docs
+    soup = BeautifulSoup(html, "html.parser")
+    for a in soup.find_all("a", href=True):
+        full = urljoin(base, a["href"])
+        link_text = a.get_text(" ", strip=True) or ""
+        # CivicPlus minutes icons often have empty visible text; aria-label helps.
+        if not link_text:
+            link_text = a.get("aria-label") or ""
+        if not _is_document_link(full, link_text) or full in seen:
+            continue
+        blob = f"{full} {link_text}".lower()
+        on_bza_path = "zoning" in full.lower() and (
+            "appeal" in full.lower() or "board_of_appeals" in full.lower()
+        )
+        labeled_bza = (
+            ("zoning" in blob and "appeal" in blob)
+            or re.search(r"\bbza\b", blob) is not None
+            or "board of zoning" in blob
+            or "land management board of appeals" in blob
+        )
+        if not (assume_bza or on_bza_path or labeled_bza):
+            continue
+        year = _doc_year(full, link_text)
+        seen.add(full)
+        docs.append({
+            "url": full,
+            "text": link_text,
+            "year": year,
+            "is_minutes": _is_minutes_link(full, link_text),
+        })
+    return docs
 
 
 async def _listing_pages(base, boza_url, boza_html):
@@ -425,25 +534,97 @@ async def _listing_pages(base, boza_url, boza_html):
     return list(listing)[:12]
 
 
-async def find_minutes_docs(base, boza_url=None, boza_html=None):
-    """Discover real agenda/minutes document URLs (CivicPlus ViewFile, PDFs, portals)."""
-    listing_urls = await _listing_pages(base, boza_url, boza_html)
-    pages = await asyncio.gather(*(fetch(u) for u in listing_urls))
+async def _historic_archive_pages(base, listing_htmls, boza_url, boza_html):
+    """Build year-by-year archive listing URLs (CivicPlus + Drupal filters)."""
+    archive_urls = []
+    years = list(range(CURRENT_YEAR, HISTORIC_START_YEAR - 1, -1))
 
-    doc_urls, seen = [], set()
-    for html in pages:
-        if not html:
+    # CivicPlus: UpdateCategoryList for each BZA category × year.
+    for html in listing_htmls:
+        for cat in _civicplus_bza_categories(html):
+            for year in years:
+                archive_urls.append(
+                    urljoin(base, CIVICPLUS_YEAR_PATH.format(year=year, cat=cat))
+                )
+
+    # Drupal Views year filter on the BOZA page itself (e.g. Colleton).
+    drupal_years = _drupal_year_options(boza_html) if boza_html else []
+    if boza_url and drupal_years:
+        for year in drupal_years:
+            if year < HISTORIC_START_YEAR:
+                continue
+            sep = "&" if "?" in boza_url else "?"
+            archive_urls.append(f"{boza_url}{sep}{DRUPAL_YEAR_PARAM}={year}")
+
+    # De-dupe while preserving order.
+    seen, out = set(), []
+    for u in archive_urls:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+def _sample_docs_across_years(docs):
+    """Prefer minutes, spread selections across archive years, cap totals."""
+    def sort_key(d):
+        year = d["year"] if d["year"] is not None else CURRENT_YEAR
+        return (0 if d["is_minutes"] else 1, year, d["url"])
+
+    ranked = sorted(docs, key=sort_key)
+    per_year = {}
+    selected = []
+    for doc in ranked:
+        year = doc["year"] if doc["year"] is not None else CURRENT_YEAR
+        if per_year.get(year, 0) >= MAX_DOCS_PER_YEAR:
             continue
-        soup = BeautifulSoup(html, "html.parser")
-        for a in soup.find_all("a", href=True):
-            full = urljoin(base, a["href"])
-            link_text = a.get_text(" ", strip=True) or ""
-            if _is_document_link(full, link_text) and full not in seen:
-                seen.add(full)
-                doc_urls.append(full)
-            if len(doc_urls) >= MAX_DOCS_PER_COUNTY:
-                return doc_urls[:MAX_DOCS_PER_COUNTY]
-    return doc_urls[:MAX_DOCS_PER_COUNTY]
+        # Within a year, prefer minutes; skip agendas once we have minutes.
+        if (
+            not doc["is_minutes"]
+            and per_year.get(year, 0) > 0
+            and any(s["year"] == year and s["is_minutes"] for s in selected)
+        ):
+            continue
+        selected.append(doc)
+        per_year[year] = per_year.get(year, 0) + 1
+        if len(selected) >= MAX_DOCS_PER_COUNTY:
+            break
+    selected.sort(key=lambda d: (0 if d["is_minutes"] else 1, d["year"] or 0, d["url"]))
+    return selected
+
+
+async def find_minutes_docs(base, boza_url=None, boza_html=None):
+    """Discover agenda/minutes docs, including year-by-year historic archives."""
+    listing_urls = await _listing_pages(base, boza_url, boza_html)
+    listing_pages = await asyncio.gather(*(fetch(u) for u in listing_urls))
+
+    archive_urls = await _historic_archive_pages(
+        base, listing_pages, boza_url, boza_html
+    )
+    # Bound concurrent archive fetches; full year×category grids can be large.
+    archive_pages = []
+    for i in range(0, len(archive_urls), 20):
+        chunk = archive_urls[i:i + 20]
+        archive_pages.extend(await asyncio.gather(*(fetch(u) for u in chunk)))
+
+    seen = set()
+    docs = []
+    # Year-archive pages are already scoped to a BZA category (or Drupal BZA view).
+    for html in archive_pages:
+        docs.extend(_collect_docs_from_html(base, html, seen, assume_bza=True))
+        if len(docs) >= MAX_DOCS_PER_COUNTY * 3:
+            break
+    # Generic listings: only keep explicitly BZA-labeled docs.
+    for html in listing_pages:
+        docs.extend(_collect_docs_from_html(base, html, seen, assume_bza=False))
+
+    # BOZA page PDFs (Colleton hosts minutes directly on the board page).
+    if boza_html and boza_url:
+        docs.extend(
+            _collect_docs_from_html(boza_url, boza_html, seen, assume_bza=True)
+        )
+
+    return _sample_docs_across_years(docs)
 
 
 async def fetch_document(url):
@@ -649,29 +830,45 @@ async def process_county(county):
 
             # Stage-1 roster becomes the "known participants" list for the LLM.
             roster_names = [m["name"] for m in members]
+            roster_keys = {_norm_name_key(n) for n in roster_names if n}
 
-            # Phase 4 + 5
+            # Phase 4 + 5: year-by-year historic minutes archives + LLM extract.
             if base:
-                doc_urls = await find_minutes_docs(base, boza_url, boza_html)
-                # Prefer minutes (attendance/appointments) over agendas.
-                doc_urls.sort(key=lambda u: 0 if "minute" in u.lower() else 1)
-                documents = []
+                docs = await find_minutes_docs(base, boza_url, boza_html)
+                documents = []  # list of (excerpt, source_year)
                 scanned = 0
-                for durl in doc_urls:
-                    if scanned >= 10 or len(documents) >= 3:
+                for doc in docs:
+                    if scanned >= MAX_DOCS_SCAN or len(documents) >= MAX_DOCS_KEEP:
                         break
                     scanned += 1
-                    content = await fetch_document(durl)
+                    content = await fetch_document(doc["url"])
                     if not content:
                         continue
                     low = content.lower()
-                    if ("zoning" in low and "appeal" in low) or "bza" in low or "board of zoning appeals" in low:
-                        documents.append(_relevant_excerpt(content))
+                    if not (
+                        ("zoning" in low and "appeal" in low)
+                        or "bza" in low
+                        or "board of zoning appeals" in low
+                        or "land management board of appeals" in low
+                        or "board of appeals" in low
+                    ):
+                        continue
+                    documents.append((
+                        _relevant_excerpt(content),
+                        doc.get("year"),
+                    ))
                 if documents:
+                    excerpts = [d[0] for d in documents]
                     # Gemini calls are synchronous; offload so counties stay concurrent.
-                    members.extend(
-                        await asyncio.to_thread(llm_extract, county, documents, roster_names)
+                    extracted = await asyncio.to_thread(
+                        llm_extract, county, excerpts, roster_names
                     )
+                    # Anyone named only in minutes (not Stage-1 roster) is historical.
+                    for item in extracted:
+                        key = _norm_name_key(item.get("name") or "")
+                        if key and key not in roster_keys:
+                            item["status"] = "historical"
+                        members.append(item)
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
 
@@ -760,6 +957,15 @@ def _merge_members(base, other):
         return (len(n.split()), sum(c.isalpha() for c in n))
     if _name_richness(other.get("name")) > _name_richness(base.get("name")):
         merged["name"] = other["name"]
+    # Sitting roster beats a historical minutes mention of the same person.
+    statuses = {
+        (base.get("status") or "").lower(),
+        (other.get("status") or "").lower(),
+    }
+    if "sitting" in statuses:
+        merged["status"] = "sitting"
+    elif "historical" in statuses:
+        merged["status"] = "historical"
     return merged
 
 
@@ -798,23 +1004,68 @@ def augment_and_dedupe(all_members):
 
 
 # ---------------------------------------------------------------------------
-# PHASE 8: output CSV + summary  /  PHASE 6.3: run all counties
+# PHASE 8: output CSV + summary  /  PHASE 6.3: run selected counties
 # ---------------------------------------------------------------------------
-async def main():
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Scrape SC Board of Zoning Appeals members (current + historic)."
+    )
+    parser.add_argument(
+        "--county",
+        action="append",
+        dest="counties",
+        metavar="NAME",
+        help=(
+            "Run only this county (repeatable). Use before fanning out statewide "
+            "to validate historic archive pulls. Default: all COUNTIES."
+        ),
+    )
+    parser.add_argument(
+        "--list-counties",
+        action="store_true",
+        help="Print the configured county list and exit.",
+    )
+    return parser.parse_args(argv)
+
+
+def _resolve_counties(selected):
+    if not selected:
+        return list(COUNTIES)
+    known = {c.lower(): c for c in COUNTIES}
+    out = []
+    for name in selected:
+        key = name.strip().lower()
+        if key not in known:
+            raise SystemExit(
+                f"Unknown county {name!r}. Use --list-counties to see options."
+            )
+        canon = known[key]
+        if canon not in out:
+            out.append(canon)
+    return out
+
+
+async def main(counties=None):
     global session
+    counties = list(counties) if counties is not None else list(COUNTIES)
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT, ssl=False)
     headers = {"User-Agent": "Mozilla/5.0 (compatible; boza-scraper/1.0)"}
     async with aiohttp.ClientSession(connector=connector, headers=headers) as sess:
         session = sess
-        tasks = [process_county(county) for county in COUNTIES]
+        tasks = [process_county(county) for county in counties]
         results = []
         for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="counties"):
             results.append(await coro)
 
     all_members = []
     summary = {}
+    status_summary = {}
     for county, members in results:
         summary[county] = len(members)
+        status_summary[county] = {
+            "sitting": sum(1 for m in members if (m.get("status") or "").lower() == "sitting"),
+            "historical": sum(1 for m in members if (m.get("status") or "").lower() == "historical"),
+        }
         all_members.extend(members)
 
     final = augment_and_dedupe(all_members)
@@ -822,10 +1073,25 @@ async def main():
     df = pd.DataFrame(final, columns=COLUMNS)
     df.to_csv(OUTPUT_CSV, index=False)
 
-    for county in COUNTIES:
-        print(f"{county}: {summary.get(county, 0)} members")
-    print(f"TOTAL: {len(final)} unique members written to {OUTPUT_CSV}")
+    for county in counties:
+        raw = summary.get(county, 0)
+        st = status_summary.get(county, {})
+        print(
+            f"{county}: {raw} raw / "
+            f"{sum(1 for m in final if m.get('county') == county)} unique "
+            f"(sitting={st.get('sitting', 0)}, historical={st.get('historical', 0)})"
+        )
+    n_hist = sum(1 for m in final if (m.get("status") or "").lower() == "historical")
+    n_sit = sum(1 for m in final if (m.get("status") or "").lower() == "sitting")
+    print(
+        f"TOTAL: {len(final)} unique members "
+        f"(sitting={n_sit}, historical={n_hist}) written to {OUTPUT_CSV}"
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = _parse_args()
+    if args.list_counties:
+        print("\n".join(COUNTIES))
+        raise SystemExit(0)
+    asyncio.run(main(_resolve_counties(args.counties)))
