@@ -1272,30 +1272,28 @@ def _guess_gender(detector, name):
 
     The library returns `andy` for androgynous names (e.g. Jackie) and
     `mostly_male` / `mostly_female` for weak signals — none of those belong
-    in the CSV as-is.
+    in the CSV as-is. Clear male/female wins; a later given name's weak lean
+    (e.g. Ray in Jackie Ray) is used only as a fallback.
     """
-    normalize = {
-        "male": "male",
-        "female": "female",
-        # Weak / ambiguous library codes — don't write them into the CSV.
-        "mostly_male": "unknown",
-        "mostly_female": "unknown",
-        "andy": "unknown",      # androgynous (yes, the library really calls it that)
-        "unknown": "unknown",
-    }
     tokens = []
     for token in (name or "").replace(".", " ").split():
         token = token.strip(",'")
         if token.isalpha() and len(token) > 1 and token.lower() not in _NAME_SUFFIXES:
             tokens.append(token)
-    # Try each given name before the surname so "Jackie Ray Crotts" can land
-    # on Ray → male when Jackie is androgynous.
+    # Try each given name before the surname.
     given = tokens[:-1] if len(tokens) >= 2 else tokens
-    for token in given:
-        label = normalize.get(detector.get_gender(token), "unknown")
-        if label in ("male", "female"):
-            return label
-    return "unknown"
+    weak = None
+    for i, token in enumerate(given):
+        raw = detector.get_gender(token)
+        if raw in ("male", "female"):
+            return raw
+        # First-token weak/andy signals stay unresolved (Kyle → mostly_female
+        # is a known library miss). Later tokens like a nickname may lean.
+        if i > 0 and raw == "mostly_male" and weak is None:
+            weak = "male"
+        elif i > 0 and raw == "mostly_female" and weak is None:
+            weak = "female"
+    return weak or "unknown"
 
 
 def augment_and_dedupe(all_members):
