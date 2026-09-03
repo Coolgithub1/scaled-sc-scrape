@@ -1267,6 +1267,36 @@ def _merge_members(base, other):
     return merged
 
 
+def _guess_gender(detector, name):
+    """Map gender-guesser labels to plain male/female/unknown.
+
+    The library returns `andy` for androgynous names (e.g. Jackie) and
+    `mostly_male` / `mostly_female` for weak signals — none of those belong
+    in the CSV as-is.
+    """
+    normalize = {
+        "male": "male",
+        "female": "female",
+        "mostly_male": "male",
+        "mostly_female": "female",
+        "andy": "unknown",      # androgynous
+        "unknown": "unknown",
+    }
+    tokens = []
+    for token in (name or "").replace(".", " ").split():
+        token = token.strip(",'")
+        if token.isalpha() and len(token) > 1 and token.lower() not in _NAME_SUFFIXES:
+            tokens.append(token)
+    # Try each given name before the surname so "Jackie Ray Crotts" can land
+    # on Ray → male when Jackie is androgynous.
+    given = tokens[:-1] if len(tokens) >= 2 else tokens
+    for token in given:
+        label = normalize.get(detector.get_gender(token), "unknown")
+        if label in ("male", "female"):
+            return label
+    return "unknown"
+
+
 def augment_and_dedupe(all_members):
     detector = gender_guesser.Detector(case_sensitive=False)
 
@@ -1289,9 +1319,12 @@ def augment_and_dedupe(all_members):
         for member in bucket:
             name = member.get("name") or ""
             if name:
-                if not member.get("gender"):
-                    first = _first_name(name)
-                    member["gender"] = detector.get_gender(first) if first else "unknown"
+                raw_gender = (member.get("gender") or "").strip().lower()
+                # Always normalize library/LLM codes; never leave `andy` in the CSV.
+                if raw_gender in ("", "null", "andy", "mostly_male", "mostly_female", "unknown"):
+                    member["gender"] = _guess_gender(detector, name)
+                else:
+                    member["gender"] = raw_gender
                 if not member.get("surname_origin"):
                     surname = _surname(name)
                     if surname:
