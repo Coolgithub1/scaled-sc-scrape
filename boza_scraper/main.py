@@ -40,6 +40,11 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # aiohttp session is created in main() and shared by all workers.
 session: aiohttp.ClientSession = None
+# Optional Playwright browser for JS-rendered county sites (shared).
+_playwright = None
+_browser = None
+_browser_lock = asyncio.Lock()
+_RENDER_SEM = asyncio.Semaphore(3)
 
 COLUMNS = [
     "state", "county", "name", "status", "term_start", "term_end",
@@ -73,10 +78,123 @@ def candidate_urls(county):
 # ---------------------------------------------------------------------------
 # PHASE 2: async HTTP client (with diskcache-backed persistence)
 # ---------------------------------------------------------------------------
-async def fetch(url):
-    """Fetch text for url. Checks cache first (key = url), then retries up to 3x."""
+def _needs_js_render(html):
+    """True when static HTML looks like an empty SPA shell / JS-gated page."""
+    if not html:
+        return True
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(" ", strip=True)
+    links = soup.find_all("a", href=True)
+    if len(text) < 500 and len(links) < 8:
+        return True
+    low = html.lower()
+    spa_markers = (
+        'id="root"',
+        "id='root'",
+        'id="app"',
+        "id='app'",
+        "ng-app",
+        "data-reactroot",
+        "__next",
+        "window.__NUXT",
+    )
+    if any(m.lower() in low for m in spa_markers) and len(text) < 2000:
+        return True
+    if "enable javascript" in low or "requires javascript" in low:
+        return True
+    return False
+
+
+async def _ensure_browser():
+    """Lazily start a shared Chromium instance for rendered fetches."""
+    global _playwright, _browser
+    async with _browser_lock:
+        if _browser is not None:
+            return _browser
+        try:
+            from playwright.async_api import async_playwright
+        except Exception:
+            return None
+        _playwright = await async_playwright().start()
+        _browser = await _playwright.chromium.launch(
+            headless=True,
+            args=["--disable-dev-shm-usage", "--no-sandbox"],
+        )
+        return _browser
+
+
+async def _close_browser():
+    global _playwright, _browser
+    async with _browser_lock:
+        if _browser is not None:
+            try:
+                await _browser.close()
+            except Exception:
+                pass
+            _browser = None
+        if _playwright is not None:
+            try:
+                await _playwright.stop()
+            except Exception:
+                pass
+            _playwright = None
+
+
+async def fetch_rendered(url):
+    """Fetch page HTML after JS execution via Playwright. Cached under RENDER::."""
+    ckey = "RENDER::" + url
+    if ckey in cache:
+        return cache[ckey]
+    browser = await _ensure_browser()
+    if browser is None:
+        return None
+    text = None
+    async with _RENDER_SEM:
+        context = None
+        try:
+            context = await browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (compatible; boza-scraper/1.0; "
+                    "+https://github.com/coolgithub1/scaled-sc-scrape)"
+                ),
+                ignore_https_errors=True,
+            )
+            page = await context.new_page()
+            await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+            try:
+                await page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
+            # Give late SPA route/content a beat to paint.
+            await page.wait_for_timeout(750)
+            text = await page.content()
+        except Exception:
+            text = None
+        finally:
+            if context is not None:
+                try:
+                    await context.close()
+                except Exception:
+                    pass
+    if text is not None:
+        cache[ckey] = text
+    return text
+
+
+async def fetch(url, allow_render=False):
+    """Fetch text for url. Checks cache first (key = url), then retries up to 3x.
+
+    When allow_render=True and the static body looks JS-gated, fall back to
+    Playwright (Chromium) so SPA / CivicEngage / Drupal AJAX pages still yield
+    roster and agenda links.
+    """
     if url in cache:
-        return cache[url]
+        text = cache[url]
+        if allow_render and _needs_js_render(text):
+            rendered = await fetch_rendered(url)
+            if rendered and not _needs_js_render(rendered):
+                return rendered
+        return text
     text = None
     for attempt in range(3):  # max 3 retries
         try:
@@ -93,6 +211,10 @@ async def fetch(url):
             continue
     if text is not None:
         cache[url] = text
+    if allow_render and _needs_js_render(text):
+        rendered = await fetch_rendered(url)
+        if rendered and (text is None or not _needs_js_render(rendered)):
+            return rendered
     return text
 
 
@@ -166,7 +288,8 @@ def _looks_like_boza(html):
 async def _reachable_bases(county):
     """Probe all candidate roots concurrently; return [(base, root_html), ...]."""
     urls = candidate_urls(county)
-    roots = await asyncio.gather(*(fetch(u) for u in urls))
+    # County homepages are often JS shells — allow Playwright fallback.
+    roots = await asyncio.gather(*(fetch(u, allow_render=True) for u in urls))
     return [(u, html) for u, html in zip(urls, roots) if html]
 
 
@@ -199,27 +322,29 @@ async def find_boza_page(county):
 
     for base, root_html in bases:
         # 1. Explicit candidate paths (fetched concurrently).
-        paths_html = await asyncio.gather(*(fetch(base + p) for p in BOZA_PATHS))
+        paths_html = await asyncio.gather(
+            *(fetch(base + p, allow_render=True) for p in BOZA_PATHS)
+        )
         for path, html in zip(BOZA_PATHS, paths_html):
             if html and _looks_like_boza(html):
                 return base, base + path, html
 
         # 2. Homepage navigation links.
         for link in _homepage_boza_links(base, root_html):
-            html = await fetch(link)
+            html = await fetch(link, allow_render=True)
             if html and _looks_like_boza(html):
                 return base, link, html
 
         # 3. Site-search fallback.
         search_url = base + "/search?q=Board+of+Zoning+Appeals"
-        html = await fetch(search_url)
+        html = await fetch(search_url, allow_render=True)
         if html:
             soup = BeautifulSoup(html, "html.parser")
             for a in soup.find_all("a", href=True):
                 href = a["href"].lower()
                 if "zoning" in href and "appeal" in href:
                     target = urljoin(base, a["href"])
-                    page = await fetch(target)
+                    page = await fetch(target, allow_render=True)
                     if page:
                         return base, target, page
 
@@ -234,18 +359,38 @@ _NON_PERSON_WORDS = {
     "agenda", "agendas", "committee", "commission", "department", "county",
     "planning", "council", "office", "division", "authority", "court", "clerk",
     "city", "town", "member", "members", "title", "video", "file", "files",
-    "land", "use", "development", "services", "district",
+    "land", "use", "development", "services", "district", "property", "owner",
+    "applicant", "application", "variance", "hardship", "exception", "request",
+    "information", "signature", "signed", "email", "phone", "address", "other",
+    "instructions", "form", "yes", "site", "subject", "location", "map",
 }
 
 
 def _is_person(name):
     if not name:
         return False
-    tokens = [t.strip(".").lower() for t in name.split()]
+    # Form fields / PDF boilerplate leave underscores, blanks, punctuation junk.
+    if re.search(r"[_=/\\]|_{2,}|\({3,}|\d{3,}", name):
+        return False
+    if len(name) > 60:
+        return False
+    if name.isupper() and len(name.split()) >= 2:
+        # "PROPERTY OWNER" etc.
+        return False
+    tokens = [t.strip(".").lower() for t in name.replace("(", " ").replace(")", " ").split()]
+    tokens = [t for t in tokens if t]
     if any(t in _NON_PERSON_WORDS for t in tokens):
         return False
     alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
-    return len(tokens) >= 2 and len(alpha) >= 1
+    if len(alpha) < 2:
+        return False
+    # Require mostly capitalized person-name tokens (reject sentence fragments).
+    raw_tokens = [t.strip(".,'") for t in name.replace("(", " ").replace(")", " ").split()]
+    named = [t for t in raw_tokens if t.isalpha() and len(t) >= 2]
+    if not named:
+        return False
+    caps = sum(1 for t in named if t[0].isupper())
+    return caps >= max(2, len(named) - 1)
 
 
 def _extract_name(text):
@@ -465,6 +610,75 @@ def _is_minutes_link(url, link_text=""):
     return "minute" in low
 
 
+def _is_minutes_document(url, link_text="", content=None):
+    """True when a doc looks like meeting minutes/agenda, not an application form."""
+    blob = f"{url} {link_text}".lower()
+    if any(
+        bad in blob
+        for bad in (
+            "application", "variance-special-exception", "request-form",
+            "special-exception-application", "variance_request",
+            "variance-request", "petition-form", "requestapplication",
+        )
+    ):
+        return False
+    if content:
+        head = content[:1200].lower()
+        if any(
+            bad in head
+            for bad in (
+                "request application",
+                "applicants must complete",
+                "application fee",
+                "property owner:",
+                "variance & special exception",
+                "variance request & hardship",
+                "hardship information",
+                "i do hereby certify",
+                "tax map #",
+            )
+        ):
+            return False
+        # Real minutes almost always have an attendance block.
+        if not re.search(
+            r"(?i)members?\s*(present|absent)?|staff\s+present",
+            content[:3000],
+        ):
+            return False
+        # Content-only path (URL already vetted): accept when attendance exists
+        # and application markers are absent.
+        if not blob.strip():
+            return True
+    return "minute" in blob or "agenda" in blob or "viewfile" in blob
+
+
+def _content_is_minutes(content):
+    """Content-only minutes gate used after a PDF/HTML body is downloaded."""
+    return _is_minutes_document("", "", content=content)
+
+
+def _title_case_name(name):
+    """Normalize 'Les green' -> 'Les Green' without wrecking Mc/O' names badly."""
+    suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+    parts = []
+    for token in name.split():
+        if re.fullmatch(r"[A-Za-z]\.", token):
+            parts.append(token.upper())
+        elif "'" in token or "\u2019" in token:
+            sep = "'" if "'" in token else "\u2019"
+            bits = token.split(sep)
+            parts.append(sep.join(b[:1].upper() + b[1:].lower() if b else b for b in bits))
+        elif token.lower().rstrip(".") in suffixes:
+            core = token.rstrip(".")
+            parts.append(
+                (core.upper() if core.lower() in {"ii", "iii", "iv", "v"} else core.title())
+                + ("." if token.endswith(".") else "")
+            )
+        else:
+            parts.append(token[:1].upper() + token[1:].lower() if token else token)
+    return " ".join(parts)
+
+
 def _civicplus_bza_categories(html):
     """Return CivicPlus AgendaCenter category IDs whose label looks like a BZA."""
     if not html:
@@ -552,6 +766,25 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
             link_text = a.get("aria-label") or ""
         if not _is_document_link(full, link_text) or full in seen:
             continue
+        # Never treat application/variance forms as minutes/agenda docs.
+        blob_early = f"{full} {link_text}".lower()
+        if any(
+            bad in blob_early
+            for bad in (
+                "application", "variance-special-exception", "request-form",
+                "special-exception-application", "variance_request",
+                "variance-request", "petition-form",
+            )
+        ):
+            continue
+        if not _is_minutes_document(full, link_text):
+            # Keep cryptic CivicPlus ViewFile / unlabeled PDFs on BZA pages.
+            if not (
+                _is_minutes_link(full, link_text)
+                or "viewfile" in full.lower()
+                or (assume_bza and full.lower().endswith(".pdf"))
+            ):
+                continue
         blob = f"{full} {link_text}".lower()
         on_bza_path = "zoning" in full.lower() and (
             "appeal" in full.lower() or "board_of_appeals" in full.lower()
@@ -665,7 +898,9 @@ def _sample_docs_across_years(docs):
 async def find_minutes_docs(base, boza_url=None, boza_html=None):
     """Discover agenda/minutes docs from present back through oldest archive year."""
     listing_urls = await _listing_pages(base, boza_url, boza_html)
-    listing_pages = await asyncio.gather(*(fetch(u) for u in listing_urls))
+    listing_pages = await asyncio.gather(
+        *(fetch(u, allow_render=True) for u in listing_urls)
+    )
 
     archive_urls = await _historic_archive_pages(
         base, listing_pages, boza_url, boza_html
@@ -674,7 +909,9 @@ async def find_minutes_docs(base, boza_url=None, boza_html=None):
     archive_pages = []
     for i in range(0, len(archive_urls), 20):
         chunk = archive_urls[i:i + 20]
-        archive_pages.extend(await asyncio.gather(*(fetch(u) for u in chunk)))
+        archive_pages.extend(
+            await asyncio.gather(*(fetch(u, allow_render=True) for u in chunk))
+        )
 
     seen = set()
     docs = []
@@ -800,6 +1037,7 @@ def _parse_attendance_names(section):
             part = _fix_ocr_name_gaps(part)
             part = _ATTENDANCE_ROLE_RE.sub("", part).strip(" \t-–—,:;")
             part = re.sub(r"\s+", " ", part)
+            part = _title_case_name(part)
             if not part or not _is_person(part):
                 continue
             low = part.lower()
@@ -811,6 +1049,8 @@ def _parse_attendance_names(section):
                 for bad in (
                     "board of", "zoning", "appeals", "department", "county",
                     "planning", "minutes", "agenda", "staff",
+                    "hardship", "variance", "applicant", "owner",
+                    "information", "signature", "property",
                 )
             ):
                 continue
@@ -890,6 +1130,9 @@ def attendance_extract(county, documents, roster_keys=None):
     for text, year in documents:
         if not text:
             continue
+        # Only parse documents that look like actual meeting minutes.
+        if not _content_is_minutes(text):
+            continue
         year_i = None
         if year is not None:
             try:
@@ -897,7 +1140,9 @@ def attendance_extract(county, documents, roster_keys=None):
             except (TypeError, ValueError):
                 year_i = None
         for row in parse_minutes_attendance(text):
-            name = row["name"]
+            name = _title_case_name(row["name"])
+            if not _is_person(name):
+                continue
             key = _norm_name_key(name)
             if not key:
                 continue
@@ -1096,7 +1341,7 @@ def llm_extract(county, documents, known=None):
             for item in data:
                 if not isinstance(item, dict) or not item.get("name"):
                     continue
-                name = str(item.get("name")).strip()
+                name = _title_case_name(str(item.get("name")).strip())
                 if not _is_person(name):
                     continue
                 extracted.append({
@@ -1128,7 +1373,7 @@ async def process_county(county):
                 members.extend(parse_current_members(boza_html, county))
                 # Rosters often live on a linked "... Members" sub-page.
                 for sub_url in _member_subpages(boza_url, boza_html):
-                    sub_html = await fetch(sub_url)
+                    sub_html = await fetch(sub_url, allow_render=True)
                     if sub_html:
                         members.extend(parse_current_members(sub_html, county))
 
@@ -1149,6 +1394,9 @@ async def process_county(county):
                     scanned += 1
                     content = await fetch_document(doc["url"])
                     if not content:
+                        continue
+                    # Skip variance applications / forms that slipped past URL filters.
+                    if not _content_is_minutes(content):
                         continue
                     low = content.lower()
                     if not (
@@ -1432,12 +1680,15 @@ async def main(counties=None):
     counties = list(counties) if counties is not None else list(COUNTIES)
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT, ssl=False)
     headers = {"User-Agent": "Mozilla/5.0 (compatible; boza-scraper/1.0)"}
-    async with aiohttp.ClientSession(connector=connector, headers=headers) as sess:
-        session = sess
-        tasks = [process_county(county) for county in counties]
-        results = []
-        for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="counties"):
-            results.append(await coro)
+    try:
+        async with aiohttp.ClientSession(connector=connector, headers=headers) as sess:
+            session = sess
+            tasks = [process_county(county) for county in counties]
+            results = []
+            for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="counties"):
+                results.append(await coro)
+    finally:
+        await _close_browser()
 
     all_members = []
     summary = {}
