@@ -1277,9 +1277,10 @@ def _guess_gender(detector, name):
     normalize = {
         "male": "male",
         "female": "female",
-        "mostly_male": "male",
-        "mostly_female": "female",
-        "andy": "unknown",      # androgynous
+        # Weak / ambiguous library codes — don't write them into the CSV.
+        "mostly_male": "unknown",
+        "mostly_female": "unknown",
+        "andy": "unknown",      # androgynous (yes, the library really calls it that)
         "unknown": "unknown",
     }
     tokens = []
