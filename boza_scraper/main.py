@@ -448,7 +448,15 @@ def _doc_year(url, link_text=""):
     m = re.search(r"ViewFile/(?:Agenda|Minutes?)/_(\d{2})(\d{2})(20\d{2})", blob, re.I)
     if m:
         return int(m.group(3))
-    m = re.search(r"(?:^|[^\d])(20[0-2]\d)(?:[^\d]|$)", blob)
+    # Filenames like bza-agenda-package-8-5-26.pdf or 2024-03-01-minutes.pdf
+    m = re.search(r"(?:^|[^\d])(20\d{2})(?:[^\d]|$)", blob)
+    if m:
+        return int(m.group(1))
+    m = re.search(r"(?:^|[^\d])(\d{1,2})[-_/](\d{1,2})[-_/](\d{2})(?:[^\d]|$)", blob)
+    if m:
+        yy = int(m.group(3))
+        return 2000 + yy if yy <= 50 else 1900 + yy
+    m = re.search(r"(?:^|[^\d])(19\d{2})(?:[^\d]|$)", blob)
     return int(m.group(1)) if m else None
 
 
