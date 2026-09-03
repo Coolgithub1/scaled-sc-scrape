@@ -389,51 +389,78 @@ MINUTES_PATHS = [
     "/minutes",
     "/government/agendas-minutes",
     "/council/agendas",
+    "/AgendaCenter",          # CivicPlus agenda/minutes portal
 ]
-PORTALS = ["legistar.com", "granicus.com", "iqm2.com"]
+PORTALS = ["legistar.com", "granicus.com", "iqm2.com", "civicplus.com", "civicweb.net"]
 DOC_KEYWORDS = ["appointed", "zoning", "bza", "board of zoning appeals"]
+# Hints that a link points at an agenda/minutes listing page worth crawling.
+AGENDA_HINTS = ["agendacenter", "agenda center", "agenda", "minutes"]
 MAX_DOCS_PER_COUNTY = 50
 
 
-async def find_minutes_docs(base):
-    doc_urls = []
-    seen = set()
-    pages = await asyncio.gather(*(fetch(base + p) for p in MINUTES_PATHS))
+def _is_document_link(url, link_text):
+    low = (url + " " + link_text).lower()
+    if "viewfile" in low or url.lower().endswith(".pdf"):
+        return True
+    return any(portal in url.lower() for portal in PORTALS)
+
+
+async def _listing_pages(base, boza_url, boza_html):
+    """Collect candidate agenda/minutes listing URLs from paths + page links."""
+    listing = set()
+    for path in MINUTES_PATHS:
+        listing.add(base.rstrip("/") + path)
+
+    home_html = await fetch(base)
+    for src_url, html in [(boza_url, boza_html), (base, home_html)]:
+        if not html:
+            continue
+        soup = BeautifulSoup(html, "html.parser")
+        for a in soup.find_all("a", href=True):
+            blob = ((a.get_text(" ", strip=True) or "") + " " + a["href"]).lower()
+            if any(hint in blob for hint in AGENDA_HINTS):
+                listing.add(urljoin(src_url or base, a["href"]))
+    return list(listing)[:12]
+
+
+async def find_minutes_docs(base, boza_url=None, boza_html=None):
+    """Discover real agenda/minutes document URLs (CivicPlus ViewFile, PDFs, portals)."""
+    listing_urls = await _listing_pages(base, boza_url, boza_html)
+    pages = await asyncio.gather(*(fetch(u) for u in listing_urls))
+
+    doc_urls, seen = [], set()
     for html in pages:
         if not html:
             continue
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.find_all("a", href=True):
             full = urljoin(base, a["href"])
-            link_text = (a.get_text(" ", strip=True) or "").lower()
-            haystack = full.lower() + " " + link_text
-            is_portal = any(portal in full.lower() for portal in PORTALS)
-            if is_portal or any(kw in haystack for kw in DOC_KEYWORDS):
-                if full not in seen:
-                    seen.add(full)
-                    doc_urls.append(full)
+            link_text = a.get_text(" ", strip=True) or ""
+            if _is_document_link(full, link_text) and full not in seen:
+                seen.add(full)
+                doc_urls.append(full)
             if len(doc_urls) >= MAX_DOCS_PER_COUNTY:
                 return doc_urls[:MAX_DOCS_PER_COUNTY]
     return doc_urls[:MAX_DOCS_PER_COUNTY]
 
 
 async def fetch_document(url):
-    low = url.lower()
-    if low.endswith(".pdf"):
-        data = await fetch_bytes(url)
-        if not data or pdfplumber is None:
+    """Return extracted text for a document URL, handling PDFs by content sniffing."""
+    data = await fetch_bytes(url)
+    if not data:
+        return None
+    if data[:4] == b"%PDF":
+        if pdfplumber is None:
             return None
         try:
             parts = []
             with pdfplumber.open(io.BytesIO(data)) as pdf:
-                for page in pdf.pages[:20]:
+                for page in pdf.pages[:8]:
                     parts.append(page.extract_text() or "")
             return "\n".join(parts)
         except Exception:
             return None
-    html = await fetch(url)
-    if not html:
-        return None
+    html = data.decode("utf-8", "ignore")
     return BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
 
 
@@ -540,13 +567,24 @@ async def process_county(county):
 
             # Phase 4 + 5
             if base:
-                doc_urls = await find_minutes_docs(base)
+                doc_urls = await find_minutes_docs(base, boza_url, boza_html)
+                # Prefer minutes (attendance/appointments) over agendas.
+                doc_urls.sort(key=lambda u: 0 if "minute" in u.lower() else 1)
                 documents = []
+                scanned = 0
                 for durl in doc_urls:
+                    if scanned >= 10 or len(documents) >= 3:
+                        break
+                    scanned += 1
                     content = await fetch_document(durl)
-                    if content and any(kw in content.lower() for kw in DOC_KEYWORDS):
+                    if not content:
+                        continue
+                    low = content.lower()
+                    if ("zoning" in low and "appeal" in low) or "bza" in low or "board of zoning appeals" in low:
                         documents.append(content)
-                members.extend(llm_extract(county, documents))
+                if documents:
+                    # Gemini calls are synchronous; offload so counties stay concurrent.
+                    members.extend(await asyncio.to_thread(llm_extract, county, documents))
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
 
@@ -588,6 +626,15 @@ def _surname(name):
     return tokens[-1] if tokens else None
 
 
+def _norm_name_key(name):
+    """First+last, lowercased, minus initials/suffixes - merges roster and LLM names."""
+    tokens = [t.strip(".").lower() for t in name.split()]
+    tokens = [t for t in tokens if t.isalpha() and len(t) > 1 and t not in _NAME_SUFFIXES]
+    if len(tokens) >= 2:
+        return tokens[0] + " " + tokens[-1]
+    return " ".join(tokens)
+
+
 def _filled_count(member):
     return sum(1 for v in member.values() if v not in (None, "", "null"))
 
@@ -598,7 +645,9 @@ def augment_and_dedupe(all_members):
     for member in all_members:
         if not member.get("name"):
             continue
-        key = (member.get("name"), member.get("term_start"))
+        # Deduplicate per person (county + normalized name) so a roster entry and
+        # the same person named in minutes collapse into one, keeping the richest.
+        key = (member.get("county"), _norm_name_key(member["name"]))
         current = keyed.get(key)
         if current is None or _filled_count(member) > _filled_count(current):
             keyed[key] = member
