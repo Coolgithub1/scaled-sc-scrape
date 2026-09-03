@@ -268,6 +268,9 @@ NAME_RE = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)\b")
 def _looks_like_boza(html):
     if not html:
         return False
+    # PDFs / binary responses are not roster pages.
+    if html.lstrip().startswith("%PDF") or "\x00" in html[:200]:
+        return False
     low = html.lower()
     # Soft-404 / error / interstitial pages often still mention zoning in the nav.
     if any(
@@ -290,17 +293,21 @@ def _looks_like_boza(html):
     ):
         return False
     title_m = re.search(r"<title[^>]*>([^<]+)", html, re.I)
-    if title_m:
-        title = title_m.group(1).lower()
-        if any(bad in title for bad in ("404", "not found", "error", "redirect", "access denied", "denied")):
-            return False
+    title = title_m.group(1).lower() if title_m else ""
+    if any(bad in title for bad in ("404", "not found", "error", "redirect", "access denied", "denied")):
+        return False
+    # Prefer visible text so cookie-CMP / minified JS "bza" tokens do not match.
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "noscript", "template"]):
+        tag.decompose()
+    visible = (title + " " + soup.get_text(" ", strip=True)).lower()
     return bool(
         re.search(
             r"board of zoning appeals|"
             r"zoning board of appeals|"
             r"land (?:use|management) board of appeals|"
             r"\bbza\b",
-            low,
+            visible,
         )
     )
 
@@ -636,7 +643,8 @@ DRUPAL_YEAR_PARAM = "field_meeting_date_value__vc3_content_date_year_offset"
 
 def _is_document_link(url, link_text):
     low = (url + " " + link_text).lower()
-    if "viewfile" in low or url.lower().endswith(".pdf"):
+    path = urlparse(url).path.lower()
+    if "viewfile" in low or path.endswith(".pdf") or ".pdf?" in low:
         return True
     return any(portal in url.lower() for portal in PORTALS)
 
@@ -694,9 +702,9 @@ def _is_minutes_document(url, link_text="", content=None):
             )
         ):
             return False
-        # Real minutes almost always have an attendance block.
+        # Real minutes almost always have an attendance block (not bare "members").
         if not re.search(
-            r"(?i)members?\s*(present|absent)?|staff\s+present",
+            r"(?i)members?\s*(?:present|absent)|staff\s+present",
             content[:3000],
         ):
             return False

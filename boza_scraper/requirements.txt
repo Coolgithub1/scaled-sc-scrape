@@ -1,0 +1,9 @@
+aiohttp
+beautifulsoup4
+pandas
+tqdm
+gender-guesser
+pdfplumber
+openai
+playwright
+diskcache
