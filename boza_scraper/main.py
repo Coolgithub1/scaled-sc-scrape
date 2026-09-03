@@ -793,10 +793,13 @@ def llm_extract(county, documents, known=None):
             for item in data:
                 if not isinstance(item, dict) or not item.get("name"):
                     continue
+                name = str(item.get("name")).strip()
+                if not _is_person(name):
+                    continue
                 extracted.append({
                     "state": STATE,
                     "county": county,
-                    "name": item.get("name"),
+                    "name": name,
                     "status": item.get("status"),
                     "term_start": item.get("term_start"),
                     "term_end": item.get("term_end"),
