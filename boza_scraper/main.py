@@ -1,5 +1,7 @@
 # main.py
 import asyncio
+import difflib
+import hashlib
 import io
 import json
 import os
@@ -467,14 +469,30 @@ async def fetch_document(url):
 # ---------------------------------------------------------------------------
 # PHASE 5: extract appointments using an LLM
 # ---------------------------------------------------------------------------
+# Prompt follows LocalGovPL's design: give the model the known participant list
+# (Stage 1 output) so it normalizes names, forbid inference to curb
+# overgeneration, and bind output to the text with an explicit end sentinel.
 PROMPT_TEMPLATE = (
-    "Extract all Board of Zoning Appeals members mentioned in the following text. \n"
+    "Extract all Board of Zoning Appeals (BZA) members explicitly named in the text below.\n"
+    "{known_block}"
     "Return a JSON list of objects with keys: name, status (\"sitting\" or \"historical\"), "
     "term_start (YYYY-MM-DD or YYYY), term_end, place_of_birth, gender, surname_origin, tenure (free text).\n"
-    "If a field is not mentioned, omit it or set to null.\n"
-    "Only return valid JSON, no other text.\n"
-    "Text: {text}"
+    "Rules:\n"
+    "- Only include people explicitly named in the text. Do NOT infer, guess, or invent members.\n"
+    "- When a name matches a known participant, reuse that participant's spelling.\n"
+    "- If a field is not mentioned, set it to null.\n"
+    "- Return only a valid JSON list, no prose. Stop when you reach END_OF_TEXT.\n"
+    "Text:\n{text}\n"
+    "END_OF_TEXT"
 )
+
+# Documents are trimmed to windows around these cues before hitting the LLM,
+# which cuts input tokens (cost/latency) and reduces spurious attributions.
+DOC_FOCUS_KEYWORDS = [
+    "board of zoning appeals", "zoning appeals", "zoning board", "bza",
+    "appointed", "reappoint", "term expires", "vacancy",
+]
+MAX_LLM_CHARS = 12000
 
 
 def _llm_client():
@@ -502,46 +520,110 @@ def _strip_json_fences(text):
     return text.strip()
 
 
-def llm_extract(county, documents):
-    """Extract members from document texts. Batches up to 3 documents per call."""
+def _relevant_excerpt(text, radius=1200, max_chars=MAX_LLM_CHARS):
+    """Keep only windows around BZA-relevant cues (LocalGovPL-style preprocessing)."""
+    low = text.lower()
+    spans = []
+    for kw in DOC_FOCUS_KEYWORDS:
+        start = 0
+        while True:
+            idx = low.find(kw, start)
+            if idx == -1:
+                break
+            spans.append((max(0, idx - radius), min(len(text), idx + radius)))
+            start = idx + len(kw)
+    if not spans:
+        return text[:max_chars]
+    spans.sort()
+    merged = [spans[0]]
+    for s, e in spans[1:]:
+        if s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+        else:
+            merged.append((s, e))
+    return "\n...\n".join(text[s:e] for s, e in merged)[:max_chars]
+
+
+def _chunk_text(text, size=MAX_LLM_CHARS):
+    """Split into <=size chunks instead of truncating, so long docs aren't dropped."""
+    if len(text) <= size:
+        return [text]
+    return [text[i:i + size] for i in range(0, len(text), size)]
+
+
+def _llm_cache_key(model, prompt):
+    return "LLM::" + hashlib.sha256((model + "\x00" + prompt).encode("utf-8")).hexdigest()
+
+
+def _llm_call(client, model, prompt):
+    """Call the LLM, caching raw responses by (model, prompt) so re-runs are free."""
+    key = _llm_cache_key(model, prompt)
+    if key in cache:
+        return cache[key]
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+        )
+        content = resp.choices[0].message.content
+    except Exception:
+        return None
+    if content is not None:
+        cache[key] = content
+    return content
+
+
+def llm_extract(county, documents, known=None):
+    """Extract members from document texts.
+
+    Batches up to 3 documents per call, chunks overflow instead of truncating,
+    passes the known participant list to normalize names, and caches responses.
+    """
     client, model = _llm_client()
     if client is None or not documents:
         return []
 
+    known_block = ""
+    if known:
+        uniq = ", ".join(sorted({n for n in known if n}))[:1200]
+        if uniq:
+            known_block = (
+                "Known current board participants (reuse these spellings when a name "
+                f"matches): {uniq}.\n"
+            )
+
     extracted = []
     for i in range(0, len(documents), 3):  # group up to 3 documents per call
-        batch = documents[i:i + 3]
-        combined = "\n\n---\n\n".join(batch)
-        combined = combined[:12000]  # keep total tokens well under the limit
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": PROMPT_TEMPLATE.format(text=combined)}],
-                temperature=0,
-            )
-            content = _strip_json_fences(resp.choices[0].message.content)
-            data = json.loads(content)
-        except Exception:
-            continue
-        if isinstance(data, dict):
-            data = [data]
-        if not isinstance(data, list):
-            continue
-        for item in data:
-            if not isinstance(item, dict):
+        combined = "\n\n---\n\n".join(documents[i:i + 3])
+        for chunk in _chunk_text(combined):
+            prompt = PROMPT_TEMPLATE.format(known_block=known_block, text=chunk)
+            content = _llm_call(client, model, prompt)
+            if not content:
                 continue
-            extracted.append({
-                "state": STATE,
-                "county": county,
-                "name": item.get("name"),
-                "status": item.get("status"),
-                "term_start": item.get("term_start"),
-                "term_end": item.get("term_end"),
-                "place_of_birth": item.get("place_of_birth"),
-                "gender": item.get("gender"),
-                "surname_origin": item.get("surname_origin"),
-                "tenure": item.get("tenure"),
-            })
+            try:
+                data = json.loads(_strip_json_fences(content))
+            except Exception:
+                continue
+            if isinstance(data, dict):
+                data = [data]
+            if not isinstance(data, list):
+                continue
+            for item in data:
+                if not isinstance(item, dict) or not item.get("name"):
+                    continue
+                extracted.append({
+                    "state": STATE,
+                    "county": county,
+                    "name": item.get("name"),
+                    "status": item.get("status"),
+                    "term_start": item.get("term_start"),
+                    "term_end": item.get("term_end"),
+                    "place_of_birth": item.get("place_of_birth"),
+                    "gender": item.get("gender"),
+                    "surname_origin": item.get("surname_origin"),
+                    "tenure": item.get("tenure"),
+                })
     return extracted
 
 
@@ -565,6 +647,9 @@ async def process_county(county):
                     if sub_html:
                         members.extend(parse_current_members(sub_html, county))
 
+            # Stage-1 roster becomes the "known participants" list for the LLM.
+            roster_names = [m["name"] for m in members]
+
             # Phase 4 + 5
             if base:
                 doc_urls = await find_minutes_docs(base, boza_url, boza_html)
@@ -581,10 +666,12 @@ async def process_county(county):
                         continue
                     low = content.lower()
                     if ("zoning" in low and "appeal" in low) or "bza" in low or "board of zoning appeals" in low:
-                        documents.append(content)
+                        documents.append(_relevant_excerpt(content))
                 if documents:
                     # Gemini calls are synchronous; offload so counties stay concurrent.
-                    members.extend(await asyncio.to_thread(llm_extract, county, documents))
+                    members.extend(
+                        await asyncio.to_thread(llm_extract, county, documents, roster_names)
+                    )
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
 
@@ -639,32 +726,74 @@ def _filled_count(member):
     return sum(1 for v in member.values() if v not in (None, "", "null"))
 
 
+def _first_initial(name):
+    for token in name.split():
+        token = token.strip(".")
+        if token[:1].isalpha():
+            return token[0].lower()
+    return None
+
+
+def _same_person(a, b):
+    """Relaxed identity match (LocalGovPL §5.3.4): surname + initial, or fuzzy name."""
+    ka, kb = _norm_name_key(a["name"]), _norm_name_key(b["name"])
+    if not ka or not kb:
+        return False
+    if ka == kb:
+        return True
+    sa, sb = _surname(a["name"]), _surname(b["name"])
+    if sa and sb and sa.lower() == sb.lower():
+        fa, fb = _first_initial(a["name"]), _first_initial(b["name"])
+        if not fa or not fb or fa == fb:
+            return True
+    return difflib.SequenceMatcher(None, ka, kb).ratio() >= 0.85
+
+
+def _merge_members(base, other):
+    """Fill null fields from `other`; keep the more complete name."""
+    merged = dict(base)
+    for key, value in other.items():
+        if merged.get(key) in (None, "", "null") and value not in (None, "", "null"):
+            merged[key] = value
+    def _name_richness(n):
+        n = n or ""
+        return (len(n.split()), sum(c.isalpha() for c in n))
+    if _name_richness(other.get("name")) > _name_richness(base.get("name")):
+        merged["name"] = other["name"]
+    return merged
+
+
 def augment_and_dedupe(all_members):
     detector = gender_guesser.Detector(case_sensitive=False)
-    keyed = {}
+
+    # Relaxed, per-county merge so name variants (roster vs minutes) collapse and
+    # complementary fields are combined rather than discarded.
+    buckets = {}
     for member in all_members:
         if not member.get("name"):
             continue
-        # Deduplicate per person (county + normalized name) so a roster entry and
-        # the same person named in minutes collapse into one, keeping the richest.
-        key = (member.get("county"), _norm_name_key(member["name"]))
-        current = keyed.get(key)
-        if current is None or _filled_count(member) > _filled_count(current):
-            keyed[key] = member
+        bucket = buckets.setdefault(member.get("county"), [])
+        for i, existing in enumerate(bucket):
+            if _same_person(existing, member):
+                bucket[i] = _merge_members(existing, member)
+                break
+        else:
+            bucket.append(member)
 
     final = []
-    for member in keyed.values():
-        name = member.get("name") or ""
-        if name:
-            if not member.get("gender"):
-                first = _first_name(name)
-                member["gender"] = detector.get_gender(first) if first else "unknown"
-            if not member.get("surname_origin"):
-                surname = _surname(name)
-                if surname:
-                    member["surname_origin"] = SURNAME_ORIGIN.get(surname.lower())
-        # place_of_birth stays blank unless it was extracted upstream.
-        final.append(member)
+    for bucket in buckets.values():
+        for member in bucket:
+            name = member.get("name") or ""
+            if name:
+                if not member.get("gender"):
+                    first = _first_name(name)
+                    member["gender"] = detector.get_gender(first) if first else "unknown"
+                if not member.get("surname_origin"):
+                    surname = _surname(name)
+                    if surname:
+                        member["surname_origin"] = SURNAME_ORIGIN.get(surname.lower())
+            # place_of_birth stays blank unless it was extracted upstream.
+            final.append(member)
     return final
 
 
