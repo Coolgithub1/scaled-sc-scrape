@@ -671,9 +671,221 @@ PROMPT_TEMPLATE = (
 # which cuts input tokens (cost/latency) and reduces spurious attributions.
 DOC_FOCUS_KEYWORDS = [
     "board of zoning appeals", "zoning appeals", "zoning board", "bza",
+    "board of appeals", "unified land management",
+    "members present", "staff present",
     "appointed", "reappoint", "term expires", "vacancy",
 ]
 MAX_LLM_CHARS = 12000
+
+# Roles stripped from attendance lines (not part of the person name).
+_ATTENDANCE_ROLE_RE = re.compile(
+    r",?\s*(?:Vice[-\s]?Chair(?:man)?|Chairman|Chair|Secretary)\s*$",
+    re.I,
+)
+_ATTENDANCE_STOP = re.compile(
+    r"(?i)\b(staff\s+present|staff\b|notice:|call to order|called the meeting|"
+    r"motion to approve|transcriptionist)\b"
+)
+
+
+def _fix_ocr_name_gaps(text):
+    """Repair PDF extractions like 'Pad gett', 'Brad y', 'Chairm an'."""
+    # Trailing 1-2 letter fragment: "Brad y" -> "Brady", "Chairm an" -> "Chairman"
+    text = re.sub(r"\b([A-Za-z]{4,})\s+([a-z]{1,2})\b", r"\1\2", text)
+    # Split surname fragment: "Pad gett" / "Dav ies" -> "Padgett" / "Davies"
+    text = re.sub(r"\b([A-Z][a-z]{1,3})\s+([a-z]{2,4})\b", r"\1\2", text)
+    return text
+
+
+def _attendance_header(text):
+    """Return the Members Present/Absent header, excluding staff lists."""
+    if not text:
+        return ""
+    # Prefer cutting at Staff Present; else at call-to-order / first motion.
+    cut = _ATTENDANCE_STOP.search(text)
+    head = text[:cut.start()] if cut else text[:2500]
+    return _fix_ocr_name_gaps(head)
+
+
+def _parse_attendance_names(section):
+    """Pull person names out of a Present/Absent section body."""
+    names = []
+    if not section:
+        return names
+    # Drop section labels that may remain inline.
+    section = re.sub(
+        r"(?i)\b(members?\s+present|members?\s+absent|members?|present|absent)\s*:?\s*",
+        "\n",
+        section,
+    )
+    role_words = {
+        "chairman", "chair", "vice", "secretary", "vicechairman",
+        "vicechair", "vice-chair", "vice-chairman",
+    }
+    for raw_line in section.splitlines():
+        line = _fix_ocr_name_gaps(raw_line)
+        line = _ATTENDANCE_ROLE_RE.sub("", line).strip(" \t-–—,:;")
+        if not line:
+            continue
+        # A line may list multiple people separated by commas or "and".
+        parts = re.split(r"\s*,\s*|\s+and\s+", line)
+        for part in parts:
+            part = _fix_ocr_name_gaps(part)
+            part = _ATTENDANCE_ROLE_RE.sub("", part).strip(" \t-–—,:;")
+            part = re.sub(r"\s+", " ", part)
+            if not part or not _is_person(part):
+                continue
+            low = part.lower()
+            if low.replace(" ", "").replace("-", "") in role_words:
+                continue
+            # Reject leftover institutional phrases.
+            if any(
+                bad in low
+                for bad in (
+                    "board of", "zoning", "appeals", "department", "county",
+                    "planning", "minutes", "agenda", "staff",
+                )
+            ):
+                continue
+            names.append(part)
+    # Unique, preserve order.
+    seen, out = set(), []
+    for n in names:
+        key = _norm_name_key(n)
+        if key and key not in seen:
+            seen.add(key)
+            out.append(n)
+    return out
+
+
+def parse_minutes_attendance(text):
+    """Deterministically parse BZA Members Present/Absent from minutes text.
+
+    Spartanburg (and many SC CivicPlus boards) put attendance at the top:
+        Members <name>, Chairman
+        Present: <names...>
+        Members <names...>          # sometimes absent names after a second Members
+        Absent: <names...>
+        Staff Present: ...
+    Returns a list of {name, attendance} dicts (attendance = present|absent|unknown).
+    """
+    head = _attendance_header(text)
+    if not head or not re.search(r"(?i)\bmembers?\b", head):
+        return []
+
+    # Normalize label variants onto their own lines for simpler splitting.
+    norm = re.sub(r"(?i)\bmembers?\s*present\s*:\s*", "\nMEMBERS_PRESENT:\n", head)
+    norm = re.sub(r"(?i)\bpresent\s*:\s*", "\nMEMBERS_PRESENT:\n", norm)
+    norm = re.sub(r"(?i)\bmembers?\s*absent\s*:\s*", "\nMEMBERS_ABSENT:\n", norm)
+    norm = re.sub(r"(?i)\babsent\s*:\s*", "\nMEMBERS_ABSENT:\n", norm)
+    # A bare "Members" line after Present usually introduces Absent names.
+    norm = re.sub(r"(?im)^\s*members?\s*$", "MEMBERS_ABSENT:", norm)
+    # Leading "Members Name, Chairman" before the first Present label.
+    norm = re.sub(r"(?i)\bmembers?\s+", "\nMEMBERS_PRESENT:\n", norm, count=1)
+
+    present, absent = [], []
+    current = None
+    for line in norm.splitlines():
+        label = line.strip()
+        if label == "MEMBERS_PRESENT:":
+            current = "present"
+            continue
+        if label == "MEMBERS_ABSENT:":
+            current = "absent"
+            continue
+        if current == "present":
+            present.append(line)
+        elif current == "absent":
+            absent.append(line)
+
+    present_names = _parse_attendance_names("\n".join(present))
+    absent_names = _parse_attendance_names("\n".join(absent))
+    # If a name is listed under both, Present wins.
+    absent_keys = {_norm_name_key(n) for n in absent_names}
+    present_keys = {_norm_name_key(n) for n in present_names}
+    out = [{"name": n, "attendance": "present"} for n in present_names]
+    for n in absent_names:
+        if _norm_name_key(n) not in present_keys:
+            out.append({"name": n, "attendance": "absent"})
+    return out
+
+
+def attendance_extract(county, documents, roster_keys=None):
+    """Build member rows from attendance headers across dated minutes.
+
+    documents: iterable of (text, source_year)
+    Members not on the Stage-1 roster are marked historical; appearance years
+    become term_start/term_end so historic rows are not empty.
+    """
+    roster_keys = roster_keys or set()
+    # Accumulate min/max year and best name spelling per identity key.
+    acc = {}
+    for text, year in documents:
+        if not text:
+            continue
+        year_i = None
+        if year is not None:
+            try:
+                year_i = int(year)
+            except (TypeError, ValueError):
+                year_i = None
+        for row in parse_minutes_attendance(text):
+            name = row["name"]
+            key = _norm_name_key(name)
+            if not key:
+                continue
+            slot = acc.get(key)
+            if slot is None:
+                slot = {
+                    "name": name,
+                    "years": [],
+                    "attendances": set(),
+                }
+                acc[key] = slot
+            else:
+                # Prefer the longer / richer spelling.
+                if len(name) > len(slot["name"]):
+                    slot["name"] = name
+            if year_i:
+                slot["years"].append(year_i)
+            slot["attendances"].add(row.get("attendance") or "unknown")
+
+    extracted = []
+    for key, slot in acc.items():
+        years = sorted(slot["years"])
+        term_start = str(years[0]) if years else None
+        term_end = str(years[-1]) if years else None
+        on_roster = key in roster_keys
+        # Still appearing in the current year's minutes → treat as sitting even
+        # if the static roster page omitted them; otherwise historic.
+        if on_roster or (years and years[-1] >= CURRENT_YEAR):
+            status = "sitting"
+        else:
+            status = "historical"
+        tenure_bits = []
+        if years:
+            tenure_bits.append(
+                f"Minutes attendance {years[0]}-{years[-1]}"
+                if years[0] != years[-1]
+                else f"Minutes attendance {years[0]}"
+            )
+        if slot["attendances"]:
+            tenure_bits.append(
+                "seen as " + "/".join(sorted(slot["attendances"]))
+            )
+        extracted.append({
+            "state": STATE,
+            "county": county,
+            "name": slot["name"],
+            "status": status,
+            "term_start": term_start,
+            "term_end": term_end,
+            "place_of_birth": None,
+            "gender": None,
+            "surname_origin": None,
+            "tenure": "; ".join(tenure_bits) if tenure_bits else None,
+        })
+    return extracted
 
 
 def _llm_client():
@@ -702,9 +914,9 @@ def _strip_json_fences(text):
 
 
 def _relevant_excerpt(text, radius=1200, max_chars=MAX_LLM_CHARS):
-    """Keep only windows around BZA-relevant cues (LocalGovPL-style preprocessing)."""
+    """Keep windows around BZA cues, always including the attendance header."""
     low = text.lower()
-    spans = []
+    spans = [(0, min(len(text), 1800))]  # attendance block lives at the top
     for kw in DOC_FOCUS_KEYWORDS:
         start = 0
         while True:
@@ -713,8 +925,6 @@ def _relevant_excerpt(text, radius=1200, max_chars=MAX_LLM_CHARS):
                 break
             spans.append((max(0, idx - radius), min(len(text), idx + radius)))
             start = idx + len(kw)
-    if not spans:
-        return text[:max_chars]
     spans.sort()
     merged = [spans[0]]
     for s, e in spans[1:]:
@@ -835,10 +1045,10 @@ async def process_county(county):
             roster_names = [m["name"] for m in members]
             roster_keys = {_norm_name_key(n) for n in roster_names if n}
 
-            # Phase 4 + 5: year-by-year historic minutes archives + LLM extract.
+            # Phase 4 + 5: year-by-year historic minutes + attendance parse + LLM.
             if base:
                 docs = await find_minutes_docs(base, boza_url, boza_html)
-                documents = []  # list of (excerpt, source_year)
+                documents = []  # list of (excerpt_or_text, source_year)
                 scanned = 0
                 for doc in docs:
                     if scanned >= MAX_DOCS_SCAN or len(documents) >= MAX_DOCS_KEEP:
@@ -856,21 +1066,26 @@ async def process_county(county):
                         or "board of appeals" in low
                     ):
                         continue
-                    documents.append((
-                        _relevant_excerpt(content),
-                        doc.get("year"),
-                    ))
+                    documents.append((content, doc.get("year")))
+
                 if documents:
-                    excerpts = [d[0] for d in documents]
-                    # Gemini calls are synchronous; offload so counties stay concurrent.
+                    # Deterministic attendance parse (ground truth for historic members).
+                    members.extend(
+                        attendance_extract(county, documents, roster_keys)
+                    )
+                    # LLM supplement for extra fields / mentions outside the header.
+                    excerpts = [_relevant_excerpt(text) for text, _ in documents]
                     extracted = await asyncio.to_thread(
                         llm_extract, county, excerpts, roster_names
                     )
-                    # Anyone named only in minutes (not Stage-1 roster) is historical.
                     for item in extracted:
                         key = _norm_name_key(item.get("name") or "")
                         if key and key not in roster_keys:
-                            item["status"] = "historical"
+                            # Don't let the LLM override a current-year attendance
+                            # sitting label later during merge; mark historical only
+                            # when the person is absent from the live roster.
+                            if (item.get("status") or "").lower() != "sitting":
+                                item["status"] = "historical"
                         members.append(item)
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
@@ -946,20 +1161,38 @@ def _same_person(a, b):
         fa, fb = _first_initial(a["name"]), _first_initial(b["name"])
         if not fa or not fb or fa == fb:
             return True
+        # "Jason Patrick" vs "Wallace Jason Patrick": shorter first appears in longer.
+        tokens_a = {t.strip(".").lower() for t in a["name"].split() if t.isalpha()}
+        tokens_b = {t.strip(".").lower() for t in b["name"].split() if t.isalpha()}
+        first_a = (_first_name(a["name"]) or "").lower()
+        first_b = (_first_name(b["name"]) or "").lower()
+        if first_a in tokens_b or first_b in tokens_a:
+            return True
     return difflib.SequenceMatcher(None, ka, kb).ratio() >= 0.85
 
 
+def _year_value(value):
+    """Best-effort YYYY int from a term field."""
+    if value in (None, "", "null"):
+        return None
+    m = re.search(r"(19|20)\d{2}", str(value))
+    return int(m.group(0)) if m else None
+
+
 def _merge_members(base, other):
-    """Fill null fields from `other`; keep the more complete name."""
+    """Fill null fields from `other`; keep the more complete name; union term years."""
     merged = dict(base)
     for key, value in other.items():
         if merged.get(key) in (None, "", "null") and value not in (None, "", "null"):
             merged[key] = value
+
     def _name_richness(n):
         n = n or ""
         return (len(n.split()), sum(c.isalpha() for c in n))
+
     if _name_richness(other.get("name")) > _name_richness(base.get("name")):
         merged["name"] = other["name"]
+
     # Sitting roster beats a historical minutes mention of the same person.
     statuses = {
         (base.get("status") or "").lower(),
@@ -969,6 +1202,24 @@ def _merge_members(base, other):
         merged["status"] = "sitting"
     elif "historical" in statuses:
         merged["status"] = "historical"
+
+    # Union attendance/roster years so historic rows keep a real span.
+    starts = [_year_value(base.get("term_start")), _year_value(other.get("term_start"))]
+    ends = [_year_value(base.get("term_end")), _year_value(other.get("term_end"))]
+    starts = [y for y in starts if y]
+    ends = [y for y in ends if y]
+    if starts:
+        merged["term_start"] = str(min(starts))
+    if ends:
+        merged["term_end"] = str(max(ends))
+
+    # Prefer tenure text that mentions minutes attendance when merging.
+    b_ten, o_ten = base.get("tenure") or "", other.get("tenure") or ""
+    if "minutes attendance" in o_ten.lower() and "minutes attendance" not in b_ten.lower():
+        merged["tenure"] = o_ten if not b_ten else f"{b_ten} | {o_ten}"
+    elif "minutes attendance" in b_ten.lower() and o_ten and o_ten not in b_ten:
+        merged["tenure"] = f"{b_ten} | {o_ten}"
+
     return merged
 
 
