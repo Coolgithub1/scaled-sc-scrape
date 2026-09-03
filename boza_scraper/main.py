@@ -43,7 +43,7 @@ session: aiohttp.ClientSession = None
 
 COLUMNS = [
     "state", "county", "name", "status", "term_start", "term_end",
-    "place_of_birth", "gender", "surname_origin", "tenure",
+    "gender", "tenure",
 ]
 
 # Timeout stays at the plan's 30s total, but a shorter connect budget keeps the
@@ -267,9 +267,7 @@ def _member(county, name, status, term_start, term_end, tenure):
         "status": status,
         "term_start": term_start,
         "term_end": term_end,
-        "place_of_birth": None,
         "gender": None,
-        "surname_origin": None,
         "tenure": tenure,
         "_from_roster": True,
     }
@@ -692,7 +690,7 @@ PROMPT_TEMPLATE = (
     "Extract all Board of Zoning Appeals (BZA) members explicitly named in the text below.\n"
     "{known_block}"
     "Return a JSON list of objects with keys: name, status (\"sitting\" or \"historical\"), "
-    "term_start (YYYY-MM-DD or YYYY), term_end, place_of_birth, gender, surname_origin, tenure (free text).\n"
+    "term_start (YYYY-MM-DD or YYYY), term_end, gender, tenure (free text).\n"
     "Rules:\n"
     "- Only include people explicitly named in the text. Do NOT infer, guess, or invent members.\n"
     "- When a name matches a known participant, reuse that participant's spelling.\n"
@@ -915,9 +913,7 @@ def attendance_extract(county, documents, roster_keys=None):
             "status": status,
             "term_start": term_start,
             "term_end": term_end,
-            "place_of_birth": None,
             "gender": None,
-            "surname_origin": None,
             "tenure": "; ".join(tenure_bits) if tenure_bits else None,
             "_from_roster": False,
             "_from_attendance": True,
@@ -1076,9 +1072,7 @@ def llm_extract(county, documents, known=None):
                     "status": item.get("status"),
                     "term_start": item.get("term_start"),
                     "term_end": item.get("term_end"),
-                    "place_of_birth": item.get("place_of_birth"),
                     "gender": item.get("gender"),
-                    "surname_origin": item.get("surname_origin"),
                     "tenure": item.get("tenure"),
                 })
     return extracted
@@ -1159,22 +1153,6 @@ async def process_county(county):
 # ---------------------------------------------------------------------------
 # PHASE 7: deduplication & augmentation
 # ---------------------------------------------------------------------------
-SURNAME_ORIGIN = {
-    "smith": "English", "johnson": "English", "williams": "Welsh",
-    "brown": "English", "jones": "Welsh", "garcia": "Spanish",
-    "miller": "German/English", "davis": "Welsh", "rodriguez": "Spanish",
-    "martinez": "Spanish", "wilson": "English/Scottish", "anderson": "Scandinavian",
-    "taylor": "English", "thomas": "Welsh", "moore": "English/Irish",
-    "jackson": "English", "white": "English", "harris": "English",
-    "clark": "English", "lewis": "Welsh", "robinson": "English",
-    "walker": "English", "young": "English/Scottish", "king": "English",
-    "wright": "English", "hill": "English", "green": "English",
-    "murphy": "Irish", "kelly": "Irish", "cohen": "Hebrew",
-    "nguyen": "Vietnamese", "patel": "Indian", "singh": "Indian/Punjabi",
-    "lee": "English/Korean/Chinese", "chen": "Chinese", "wang": "Chinese",
-}
-
-
 _NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
 
@@ -1358,20 +1336,17 @@ def augment_and_dedupe(all_members):
                     member["gender"] = _guess_gender(detector, name)
                 else:
                     member["gender"] = raw_gender
-                if not member.get("surname_origin"):
-                    surname = _surname(name)
-                    if surname:
-                        member["surname_origin"] = SURNAME_ORIGIN.get(surname.lower())
             # Final status normalization from evidence (roster / term years).
             end = _year_value(member.get("term_end"))
             if member.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
                 member["status"] = "sitting"
             elif end is not None and end < CURRENT_YEAR and not member.get("_from_roster"):
                 member["status"] = "historical"
-            # Drop internal bookkeeping flags before CSV output.
+            # Drop internal bookkeeping flags / retired columns before CSV output.
             member.pop("_from_roster", None)
             member.pop("_from_attendance", None)
-            # place_of_birth stays blank unless it was extracted upstream.
+            member.pop("place_of_birth", None)
+            member.pop("surname_origin", None)
             final.append(member)
     return final
 
