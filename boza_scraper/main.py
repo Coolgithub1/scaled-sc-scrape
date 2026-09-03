@@ -29,7 +29,7 @@ except Exception:  # pragma: no cover - optional at runtime
 from config import (
     STATE, MAX_CONCURRENT, CACHE_DIR, OUTPUT_CSV,
     OPENAI_MODEL, GEMINI_MODEL, GEMINI_BASE_URL,
-    HISTORIC_START_YEAR, MAX_DOCS_PER_YEAR, MAX_DOCS_KEEP, MAX_DOCS_SCAN,
+    ARCHIVE_YEAR_FLOOR, MAX_DOCS_PER_YEAR, MAX_DOCS_KEEP, MAX_DOCS_SCAN,
 )
 from counties import COUNTIES
 from cache import cache
@@ -463,6 +463,25 @@ def _civicplus_bza_categories(html):
     return out
 
 
+def _civicplus_years_for_category(html, cat_id):
+    """Years advertised for a CivicPlus category via changeYear(year, catId, ...)."""
+    if not html:
+        return []
+    years = {
+        int(y)
+        for y in re.findall(
+            rf"changeYear\((\d{{4}}),\s*{re.escape(str(cat_id))}\b",
+            html,
+        )
+    }
+    # Keep only plausible archive years; newest first (present → historic).
+    years = {
+        y for y in years
+        if ARCHIVE_YEAR_FLOOR <= y <= CURRENT_YEAR + 1
+    }
+    return sorted(years, reverse=True)
+
+
 def _drupal_year_options(html):
     """Years listed in a Drupal BOZA meeting-date year filter select."""
     if not html or DRUPAL_YEAR_PARAM not in html:
@@ -475,9 +494,16 @@ def _drupal_year_options(html):
             continue
         for opt in sel.find_all("option"):
             val = (opt.get("value") or opt.get_text(strip=True) or "").strip()
-            if re.fullmatch(r"20[0-2]\d", val):
-                years.append(int(val))
+            if re.fullmatch(r"(?:19|20)\d{2}", val):
+                year = int(val)
+                if ARCHIVE_YEAR_FLOOR <= year <= CURRENT_YEAR + 1:
+                    years.append(year)
     return sorted(set(years), reverse=True)
+
+
+def _fallback_year_list():
+    """Present → floor when a portal does not advertise its year list."""
+    return list(range(CURRENT_YEAR, ARCHIVE_YEAR_FLOOR - 1, -1))
 
 
 def _collect_docs_from_html(base, html, seen, assume_bza=False):
@@ -532,17 +558,25 @@ async def _listing_pages(base, boza_url, boza_html):
             blob = ((a.get_text(" ", strip=True) or "") + " " + a["href"]).lower()
             if any(hint in blob for hint in AGENDA_HINTS):
                 listing.add(urljoin(src_url or base, a["href"]))
-    return list(listing)[:12]
+    # Case-insensitive de-dupe (/AgendaCenter vs /agendacenter).
+    seen, out = set(), []
+    for u in listing:
+        key = u.rstrip("/").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(u)
+    return out[:12]
 
 
 async def _historic_archive_pages(base, listing_htmls, boza_url, boza_html):
-    """Build year-by-year archive listing URLs (CivicPlus + Drupal filters)."""
+    """Build year-by-year archive listing URLs from present back to oldest available."""
     archive_urls = []
-    years = list(range(CURRENT_YEAR, HISTORIC_START_YEAR - 1, -1))
 
-    # CivicPlus: UpdateCategoryList for each BZA category × year.
+    # CivicPlus: UpdateCategoryList for each BZA category × every year the portal lists.
     for html in listing_htmls:
         for cat in _civicplus_bza_categories(html):
+            years = _civicplus_years_for_category(html, cat) or _fallback_year_list()
             for year in years:
                 archive_urls.append(
                     urljoin(base, CIVICPLUS_YEAR_PATH.format(year=year, cat=cat))
@@ -552,12 +586,10 @@ async def _historic_archive_pages(base, listing_htmls, boza_url, boza_html):
     drupal_years = _drupal_year_options(boza_html) if boza_html else []
     if boza_url and drupal_years:
         for year in drupal_years:
-            if year < HISTORIC_START_YEAR:
-                continue
             sep = "&" if "?" in boza_url else "?"
             archive_urls.append(f"{boza_url}{sep}{DRUPAL_YEAR_PARAM}={year}")
 
-    # De-dupe while preserving order.
+    # De-dupe while preserving order (already newest-first per source).
     seen, out = set(), []
     for u in archive_urls:
         if u not in seen:
@@ -567,10 +599,11 @@ async def _historic_archive_pages(base, listing_htmls, boza_url, boza_html):
 
 
 def _sample_docs_across_years(docs):
-    """Prefer minutes, spread selections across archive years, cap totals."""
+    """Prefer minutes; cover every archive year from present back to oldest."""
+    # Newest year first so the crawl walks present → historic.
     def sort_key(d):
         year = d["year"] if d["year"] is not None else CURRENT_YEAR
-        return (0 if d["is_minutes"] else 1, year, d["url"])
+        return (0 if d["is_minutes"] else 1, -year, d["url"])
 
     ranked = sorted(docs, key=sort_key)
     per_year = {}
@@ -590,12 +623,15 @@ def _sample_docs_across_years(docs):
         per_year[year] = per_year.get(year, 0) + 1
         if len(selected) >= MAX_DOCS_PER_COUNTY:
             break
-    selected.sort(key=lambda d: (0 if d["is_minutes"] else 1, d["year"] or 0, d["url"]))
+    # Download order: minutes first, then present → historic.
+    selected.sort(
+        key=lambda d: (0 if d["is_minutes"] else 1, -(d["year"] or 0), d["url"])
+    )
     return selected
 
 
 async def find_minutes_docs(base, boza_url=None, boza_html=None):
-    """Discover agenda/minutes docs, including year-by-year historic archives."""
+    """Discover agenda/minutes docs from present back through oldest archive year."""
     listing_urls = await _listing_pages(base, boza_url, boza_html)
     listing_pages = await asyncio.gather(*(fetch(u) for u in listing_urls))
 
@@ -610,12 +646,10 @@ async def find_minutes_docs(base, boza_url=None, boza_html=None):
 
     seen = set()
     docs = []
-    # Year-archive pages are already scoped to a BZA category (or Drupal BZA view).
+    # Walk every archive year (present → oldest). Do not early-stop on raw doc
+    # count — older years must not be skipped because newer years filled a cap.
     for html in archive_pages:
         docs.extend(_collect_docs_from_html(base, html, seen, assume_bza=True))
-        if len(docs) >= MAX_DOCS_PER_COUNTY * 3:
-            break
-    # Generic listings: only keep explicitly BZA-labeled docs.
     for html in listing_pages:
         docs.extend(_collect_docs_from_html(base, html, seen, assume_bza=False))
 
