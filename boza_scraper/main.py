@@ -248,9 +248,16 @@ async def fetch_bytes(url):
 BOZA_PATHS = [
     "/boards/zoning",
     "/departments/planning-zoning/board-of-zoning-appeals",
+    "/departments/zoning-planning/bza.php",
+    "/departments/zoning-planning/board-of-zoning-appeals",
     "/government/boards-commissions",
     "/planning/board-of-zoning-appeals",
     "/zoning-board",
+    "/departments/zoning-planning/board-of-zoning-appeals",
+    "/government/board-of-zoning-appeals",
+    "/board-of-zoning-appeals",
+    "/boards-and-commissions/board-of-zoning-appeals",
+    "/residents/boards-commissions/board-of-zoning-appeals",
 ]
 
 TERM_RE = re.compile(r"(\d{4})[-\u2013](\d{4})")
@@ -274,15 +281,28 @@ def _looks_like_boza(html):
             ">redirecting",
             "redirecting...",
             "error - 404",
+            "access denied",
+            "permission to access",
+            "errors.edgesuite.net",
+            "request blocked",
+            "just a moment...",  # Cloudflare challenge
         )
     ):
         return False
     title_m = re.search(r"<title[^>]*>([^<]+)", html, re.I)
     if title_m:
         title = title_m.group(1).lower()
-        if any(bad in title for bad in ("404", "not found", "error", "redirect")):
+        if any(bad in title for bad in ("404", "not found", "error", "redirect", "access denied", "denied")):
             return False
-    return "zoning" in low and "appeal" in low
+    return bool(
+        re.search(
+            r"board of zoning appeals|"
+            r"zoning board of appeals|"
+            r"land (?:use|management) board of appeals|"
+            r"\bbza\b",
+            low,
+        )
+    )
 
 
 async def _reachable_bases(county):
@@ -302,6 +322,8 @@ def _homepage_boza_links(base, root_html):
         href = a["href"].lower()
         blob = text + " " + href
         score = ("zoning" in blob) + ("appeal" in blob) + ("board" in blob)
+        if re.search(r"\bbza\b", blob):
+            score += 2
         if score >= 2:
             scored.append((score, urljoin(base, a["href"])))
     scored.sort(key=lambda item: item[0], reverse=True)
@@ -310,7 +332,30 @@ def _homepage_boza_links(base, root_html):
         if link not in seen:
             seen.add(link)
             links.append(link)
-    return links[:5]
+    return links[:8]
+
+
+def _planning_hub_links(base, root_html):
+    """Planning/zoning department hubs often link to the BZA one level down."""
+    soup = BeautifulSoup(root_html, "html.parser")
+    hubs = []
+    for a in soup.find_all("a", href=True):
+        blob = ((a.get_text(" ", strip=True) or "") + " " + a["href"]).lower()
+        if ("zoning" in blob or "planning" in blob) and any(
+            k in blob for k in ("department", "planning", "zoning", "community", "development")
+        ):
+            full = urljoin(base, a["href"])
+            if full.startswith(base.rstrip("/") ) or urlparse(full).netloc.endswith(
+                urlparse(base).netloc.split(".", 1)[-1]
+            ):
+                hubs.append(full)
+    # Unique, capped.
+    seen, out = set(), []
+    for u in hubs:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out[:6]
 
 
 async def find_boza_page(county):
@@ -335,17 +380,27 @@ async def find_boza_page(county):
             if html and _looks_like_boza(html):
                 return base, link, html
 
-        # 3. Site-search fallback.
+        # 3. One-hop from planning/zoning department hubs (Charleston pattern).
+        for hub in _planning_hub_links(base, root_html):
+            hub_html = await fetch(hub, allow_render=True)
+            if not hub_html:
+                continue
+            for link in _homepage_boza_links(hub if "://" in hub else base, hub_html):
+                html = await fetch(link, allow_render=True)
+                if html and _looks_like_boza(html):
+                    return base, link, html
+
+        # 4. Site-search fallback.
         search_url = base + "/search?q=Board+of+Zoning+Appeals"
         html = await fetch(search_url, allow_render=True)
         if html:
             soup = BeautifulSoup(html, "html.parser")
             for a in soup.find_all("a", href=True):
                 href = a["href"].lower()
-                if "zoning" in href and "appeal" in href:
+                if ("zoning" in href and "appeal" in href) or href.endswith("bza.php") or "/bza" in href:
                     target = urljoin(base, a["href"])
                     page = await fetch(target, allow_render=True)
-                    if page:
+                    if page and _looks_like_boza(page):
                         return base, target, page
 
     return primary_base, None, None
@@ -1437,6 +1492,41 @@ async def process_county(county):
 # ---------------------------------------------------------------------------
 _NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
+# Common given-name aliases so "Jerry Noe" merges with "Gerald Noe".
+_FIRST_NAME_ALIASES = {
+    "jerry": "gerald",
+    "gerald": "gerald",
+    "jim": "james",
+    "jimmy": "james",
+    "james": "james",
+    "bob": "robert",
+    "bobby": "robert",
+    "robert": "robert",
+    "bill": "william",
+    "billy": "william",
+    "will": "william",
+    "william": "william",
+    "tom": "thomas",
+    "tommy": "thomas",
+    "thomas": "thomas",
+    "mike": "michael",
+    "michael": "michael",
+    "steve": "stephen",
+    "steven": "stephen",
+    "stephen": "stephen",
+    "dick": "richard",
+    "rick": "richard",
+    "richard": "richard",
+    "jack": "john",
+    "johnny": "john",
+    "john": "john",
+}
+
+
+def _canonical_first(name):
+    first = (_first_name(name) or "").lower()
+    return _FIRST_NAME_ALIASES.get(first, first)
+
 
 def _first_name(name):
     for token in name.replace(".", " ").split():
@@ -1481,6 +1571,9 @@ def _same_person(a, b):
         return True
     sa, sb = _surname(a["name"]), _surname(b["name"])
     if sa and sb and sa.lower() == sb.lower():
+        # Nickname-aware first-name match (Jerry ≈ Gerald).
+        if _canonical_first(a["name"]) and _canonical_first(a["name"]) == _canonical_first(b["name"]):
+            return True
         fa, fb = _first_initial(a["name"]), _first_initial(b["name"])
         if not fa or not fb or fa == fb:
             return True
