@@ -59,10 +59,14 @@ def candidate_urls(county):
     base = county.lower().replace(" ", "")
     return [
         f"https://www.{base}county.sc.gov",
+        f"https://www.{base}countysc.gov",
+        f"https://www.{base}countygov.com",
         f"https://www.{base}county.org",
         f"https://{base}county.sc.gov",
+        f"https://{base}countysc.gov",
         f"https://www.{base}county.com",
         f"https://www.{county.lower()}.sc.gov",
+        f"https://www.{base}county.gov",
     ]
 
 
@@ -133,7 +137,29 @@ NAME_RE = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+)\b")
 
 
 def _looks_like_boza(html):
+    if not html:
+        return False
     low = html.lower()
+    # Soft-404 / error / interstitial pages often still mention zoning in the nav.
+    if any(
+        bad in low
+        for bad in (
+            "404 web page error",
+            "page not found",
+            "404 error",
+            "404.0 - not found",
+            "aspxerrorpath",
+            ">redirecting",
+            "redirecting...",
+            "error - 404",
+        )
+    ):
+        return False
+    title_m = re.search(r"<title[^>]*>([^<]+)", html, re.I)
+    if title_m:
+        title = title_m.group(1).lower()
+        if any(bad in title for bad in ("404", "not found", "error", "redirect")):
+            return False
     return "zoning" in low and "appeal" in low
 
 
