@@ -23,12 +23,16 @@ try:
 except Exception:  # pragma: no cover - optional at runtime
     OpenAI = None
 
-from config import STATE, MAX_CONCURRENT, CACHE_DIR, OUTPUT_CSV, OPENAI_MODEL
+from config import (
+    STATE, MAX_CONCURRENT, CACHE_DIR, OUTPUT_CSV,
+    OPENAI_MODEL, GEMINI_MODEL, GEMINI_BASE_URL,
+)
 from counties import COUNTIES
 from cache import cache
 
 CURRENT_YEAR = datetime.now().year
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # aiohttp session is created in main() and shared by all workers.
 session: aiohttp.ClientSession = None
@@ -446,18 +450,34 @@ PROMPT_TEMPLATE = (
 )
 
 
-def _openai_client():
-    if not OPENAI_API_KEY or OpenAI is None:
-        return None
-    try:
-        return OpenAI()
-    except Exception:
-        return None
+def _llm_client():
+    """Return (client, model). Prefers Gemini (OpenAI-compatible), else OpenAI."""
+    if OpenAI is None:
+        return None, None
+    if GEMINI_API_KEY:
+        try:
+            return OpenAI(api_key=GEMINI_API_KEY, base_url=GEMINI_BASE_URL), GEMINI_MODEL
+        except Exception:
+            return None, None
+    if OPENAI_API_KEY:
+        try:
+            return OpenAI(), OPENAI_MODEL
+        except Exception:
+            return None, None
+    return None, None
+
+
+def _strip_json_fences(text):
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text)
+    return text.strip()
 
 
 def llm_extract(county, documents):
     """Extract members from document texts. Batches up to 3 documents per call."""
-    client = _openai_client()
+    client, model = _llm_client()
     if client is None or not documents:
         return []
 
@@ -468,11 +488,11 @@ def llm_extract(county, documents):
         combined = combined[:12000]  # keep total tokens well under the limit
         try:
             resp = client.chat.completions.create(
-                model=OPENAI_MODEL,
+                model=model,
                 messages=[{"role": "user", "content": PROMPT_TEMPLATE.format(text=combined)}],
                 temperature=0,
             )
-            content = resp.choices[0].message.content.strip()
+            content = _strip_json_fences(resp.choices[0].message.content)
             data = json.loads(content)
         except Exception:
             continue
