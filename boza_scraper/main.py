@@ -235,8 +235,8 @@ def _clean_name(raw):
     raw = re.sub(r"District\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"At[-\s]?Large", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"Seat\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
-    # Drop quoted nicknames like "Ray" that otherwise break the name.
-    raw = re.sub(r"[\"\u201c\u201d\u2018\u2019'][^\"\u201c\u201d\u2018\u2019']*[\"\u201c\u201d\u2018\u2019']", " ", raw)
+    # Keep quoted nicknames as plain tokens ("Ray" -> Ray) so minutes aliases match.
+    raw = re.sub(r"[\"\u201c\u201d\u2018\u2019']", " ", raw)
     # An address/phone starts with a digit; cut the cell there.
     raw = re.split(r"\d", raw, 1)[0]
     tokens = re.findall(r"[A-Z][a-zA-Z.'\-]*", raw)
@@ -271,6 +271,7 @@ def _member(county, name, status, term_start, term_end, tenure):
         "gender": None,
         "surname_origin": None,
         "tenure": tenure,
+        "_from_roster": True,
     }
 
 
@@ -884,8 +885,36 @@ def attendance_extract(county, documents, roster_keys=None):
             "gender": None,
             "surname_origin": None,
             "tenure": "; ".join(tenure_bits) if tenure_bits else None,
+            "_from_roster": False,
+            "_from_attendance": True,
         })
     return extracted
+
+
+def _spread_docs_for_llm(documents, limit):
+    """Pick up to `limit` docs spread across years (not only the oldest)."""
+    if len(documents) <= limit:
+        return list(documents)
+    by_year = {}
+    for item in documents:
+        year = item[1] if item[1] is not None else CURRENT_YEAR
+        by_year.setdefault(year, []).append(item)
+    years = sorted(by_year)
+    selected, idx = [], 0
+    # Round-robin across years so historic + recent both reach the LLM.
+    while len(selected) < limit and years:
+        year = years[idx % len(years)]
+        bucket = by_year[year]
+        if bucket:
+            selected.append(bucket.pop(0))
+        if not bucket:
+            years = [y for y in years if by_year[y]]
+            if not years:
+                break
+            idx = idx % len(years)
+            continue
+        idx += 1
+    return selected
 
 
 def _llm_client():
@@ -1048,10 +1077,12 @@ async def process_county(county):
             # Phase 4 + 5: year-by-year historic minutes + attendance parse + LLM.
             if base:
                 docs = await find_minutes_docs(base, boza_url, boza_html)
-                documents = []  # list of (excerpt_or_text, source_year)
+                # Attendance parsing is cheap — use the full year-sampled set so
+                # term spans cover the whole archive (not just the oldest chunk).
+                attendance_docs = []
                 scanned = 0
                 for doc in docs:
-                    if scanned >= MAX_DOCS_SCAN or len(documents) >= MAX_DOCS_KEEP:
+                    if scanned >= MAX_DOCS_SCAN:
                         break
                     scanned += 1
                     content = await fetch_document(doc["url"])
@@ -1066,26 +1097,24 @@ async def process_county(county):
                         or "board of appeals" in low
                     ):
                         continue
-                    documents.append((content, doc.get("year")))
+                    attendance_docs.append((content, doc.get("year")))
 
-                if documents:
-                    # Deterministic attendance parse (ground truth for historic members).
+                if attendance_docs:
                     members.extend(
-                        attendance_extract(county, documents, roster_keys)
+                        attendance_extract(county, attendance_docs, roster_keys)
                     )
-                    # LLM supplement for extra fields / mentions outside the header.
-                    excerpts = [_relevant_excerpt(text) for text, _ in documents]
+                    # LLM only on a year-spread subset (cost/latency bound).
+                    llm_docs = _spread_docs_for_llm(attendance_docs, MAX_DOCS_KEEP)
+                    excerpts = [_relevant_excerpt(text) for text, _ in llm_docs]
                     extracted = await asyncio.to_thread(
                         llm_extract, county, excerpts, roster_names
                     )
                     for item in extracted:
                         key = _norm_name_key(item.get("name") or "")
                         if key and key not in roster_keys:
-                            # Don't let the LLM override a current-year attendance
-                            # sitting label later during merge; mark historical only
-                            # when the person is absent from the live roster.
-                            if (item.get("status") or "").lower() != "sitting":
-                                item["status"] = "historical"
+                            # Never let the LLM promote a non-roster person to
+                            # sitting just because they were "present" in old minutes.
+                            item["status"] = "historical"
                         members.append(item)
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
@@ -1183,6 +1212,9 @@ def _merge_members(base, other):
     """Fill null fields from `other`; keep the more complete name; union term years."""
     merged = dict(base)
     for key, value in other.items():
+        if key.startswith("_"):
+            merged[key] = bool(merged.get(key)) or bool(value)
+            continue
         if merged.get(key) in (None, "", "null") and value not in (None, "", "null"):
             merged[key] = value
 
@@ -1193,15 +1225,10 @@ def _merge_members(base, other):
     if _name_richness(other.get("name")) > _name_richness(base.get("name")):
         merged["name"] = other["name"]
 
-    # Sitting roster beats a historical minutes mention of the same person.
-    statuses = {
-        (base.get("status") or "").lower(),
-        (other.get("status") or "").lower(),
-    }
-    if "sitting" in statuses:
-        merged["status"] = "sitting"
-    elif "historical" in statuses:
-        merged["status"] = "historical"
+    merged["_from_roster"] = bool(base.get("_from_roster")) or bool(other.get("_from_roster"))
+    merged["_from_attendance"] = bool(base.get("_from_attendance")) or bool(
+        other.get("_from_attendance")
+    )
 
     # Union attendance/roster years so historic rows keep a real span.
     starts = [_year_value(base.get("term_start")), _year_value(other.get("term_start"))]
@@ -1219,6 +1246,23 @@ def _merge_members(base, other):
         merged["tenure"] = o_ten if not b_ten else f"{b_ten} | {o_ten}"
     elif "minutes attendance" in b_ten.lower() and o_ten and o_ten not in b_ten:
         merged["tenure"] = f"{b_ten} | {o_ten}"
+
+    # Status from evidence, not LLM vibes:
+    # roster row or still current (term_end >= this year) => sitting; else historical.
+    end = _year_value(merged.get("term_end"))
+    if merged.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
+        merged["status"] = "sitting"
+    elif end is not None and end < CURRENT_YEAR:
+        merged["status"] = "historical"
+    else:
+        statuses = {
+            (base.get("status") or "").lower(),
+            (other.get("status") or "").lower(),
+        }
+        if "historical" in statuses and not merged.get("_from_roster"):
+            merged["status"] = "historical"
+        elif "sitting" in statuses:
+            merged["status"] = "sitting"
 
     return merged
 
@@ -1252,6 +1296,15 @@ def augment_and_dedupe(all_members):
                     surname = _surname(name)
                     if surname:
                         member["surname_origin"] = SURNAME_ORIGIN.get(surname.lower())
+            # Final status normalization from evidence (roster / term years).
+            end = _year_value(member.get("term_end"))
+            if member.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
+                member["status"] = "sitting"
+            elif end is not None and end < CURRENT_YEAR and not member.get("_from_roster"):
+                member["status"] = "historical"
+            # Drop internal bookkeeping flags before CSV output.
+            member.pop("_from_roster", None)
+            member.pop("_from_attendance", None)
             # place_of_birth stays blank unless it was extracted upstream.
             final.append(member)
     return final
