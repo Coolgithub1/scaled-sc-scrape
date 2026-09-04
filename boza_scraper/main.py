@@ -48,6 +48,11 @@ _playwright = None
 _browser = None
 _browser_lock = asyncio.Lock()
 _RENDER_SEM = asyncio.Semaphore(3)
+_OCR_SEM = asyncio.Semaphore(1)  # tesseract is CPU-heavy; never pile up
+_OCR_MAX_PAGES = 2
+_OCR_DPI = 150
+_OCR_MAX_BYTES = 4_000_000  # skip giant scanned packets
+_OCR_TIMEOUT_SEC = 45
 
 COLUMNS = [
     "state", "county", "name", "status", "term_start", "term_end",
@@ -1290,11 +1295,21 @@ async def fetch_document(url):
                 text = "\n".join(parts)
             except Exception:
                 text = None
-        # Image-only / scanned minutes: OCR first few pages.
-        if (not text or len(text.strip()) < 80) and len(data) < 12_000_000:
-            ocr_text = await asyncio.to_thread(_ocr_pdf_bytes, data)
-            if ocr_text and len(ocr_text.strip()) > len((text or "").strip()):
-                text = ocr_text
+        # Image-only / scanned minutes: OCR a couple pages under a hard timeout.
+        if (
+            (not text or len(text.strip()) < 80)
+            and len(data) <= _OCR_MAX_BYTES
+        ):
+            try:
+                async with _OCR_SEM:
+                    ocr_text = await asyncio.wait_for(
+                        asyncio.to_thread(_ocr_pdf_bytes, data),
+                        timeout=_OCR_TIMEOUT_SEC,
+                    )
+                if ocr_text and len(ocr_text.strip()) > len((text or "").strip()):
+                    text = ocr_text
+            except Exception:
+                pass
         return text
     try:
         html = data.decode("utf-8", "ignore")
@@ -1303,15 +1318,18 @@ async def fetch_document(url):
         return None
 
 
-def _ocr_pdf_bytes(data, max_pages=3):
+def _ocr_pdf_bytes(data, max_pages=None):
     """OCR a PDF via pdf2image + tesseract. Returns '' on failure."""
+    max_pages = max_pages or _OCR_MAX_PAGES
     try:
         import pytesseract
         from pdf2image import convert_from_bytes
     except Exception:
         return ""
     try:
-        images = convert_from_bytes(data, first_page=1, last_page=max_pages, dpi=200)
+        images = convert_from_bytes(
+            data, first_page=1, last_page=max_pages, dpi=_OCR_DPI
+        )
     except Exception:
         return ""
     parts = []
