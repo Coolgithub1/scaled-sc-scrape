@@ -1,44 +1,284 @@
 state,county,name,status,term_start,term_end,gender,tenure
-South Carolina,Spartanburg,Angela L. Geter,sitting,2018.0,2030.0,female,"District #1 Angela L. Geter 772 Fulton Avenue Spartanburg, SC  29303 (H) 864-583-2047 03/19/18 02/16/26 01/17/30 | Minutes attendance 2019-2026; seen as present"
-South Carolina,Spartanburg,M. Steve Hammett,sitting,2026.0,2030.0,male,"District #2 M. Steve Hammett 541 Fagan Drive Inman, SC 29349 (H) 864-205-2744 06/15/26 06/15/26 06/15/30"
-South Carolina,Spartanburg,Wallace Jason Patrick,sitting,2012.0,2028.0,male,"District #3 Wallace Jason Patrick 330 Round Ridge Road Spartanburg, SC 2932 (B) 864-585-2000 05/21/12 01/22/24 01/17/28 | Minutes attendance 2013-2026; seen as absent/present"
-South Carolina,Spartanburg,Thomas Albert Davies,sitting,2010.0,2027.0,male,"District #4 Thomas Albert Davies 380 Mary Hanna Road Woodruff, SC 29388 (H) 864-969-3330 (B) 864-706-5534 03/15/10 01/23/23 01/17/27 | Minutes attendance 2013-2026; seen as present"
-South Carolina,Spartanburg,James David Langford Jr.,sitting,2023.0,2027.0,male,"District #5 James David Langford Jr. 135 N. Blackstock Road Landrum, SC  29356 (H) 864-316-5782 (B) 864-457-2157 01/23/23 01/23/23 01/17/27 | Minutes attendance 2023-2026; seen as absent/present | Minutes attendance 2025; seen as present"
-South Carolina,Spartanburg,Jackie Ray Crotts,sitting,2023.0,2029.0,male,"District #6 Jackie ""Ray"" Crotts 146 Emily Drive Moore, SC  29369 (B) 864-576-1000 05/15/23 02/17/25 02/17/29 | Minutes attendance 2024-2026; seen as present"
-South Carolina,Spartanburg,Jack D. Gowan Jr.,sitting,2013.0,2027.0,male,"At Large Jack D. Gowan, Jr. 4 Celeste Court Spartanburg, SC 29301 10/21/13 01/23/23 01/17/27 | Minutes attendance 2015-2026; seen as present"
-South Carolina,Spartanburg,Stephen J. Wunder,sitting,2022.0,2030.0,male,"At Large Stephen J. Wunder 606 Mount Vernon Lane Duncan, SC  29334 (B) 864-398-4444 02/21/22 12/08/25 01/17/30 | Minutes attendance 2022-2026; seen as absent/present"
-South Carolina,Spartanburg,Michael Erik Horton,sitting,2026.0,2030.0,male,"At Large Michael ""Erik"" Horton 900 N. Trade Avenue Ext. Landrum, SC 29356 (H) 864-884-2158 05/18/26 05/18/26 5/18/30"
-South Carolina,Spartanburg,Glenda Brady,historical,2021.0,2025.0,female,Minutes attendance 2021-2025; seen as absent/present
-South Carolina,Spartanburg,Kae Fleming,historical,2013.0,2025.0,female,Minutes attendance 2013-2025; seen as present
-South Carolina,Spartanburg,Michael Padgett,historical,2015.0,2023.0,male,Minutes attendance 2015-2023; seen as present
-South Carolina,Spartanburg,Marion Gramling,historical,2013.0,2022.0,female,Minutes attendance 2013-2022; seen as absent/present
-South Carolina,Spartanburg,Louise Rakes,historical,2013.0,2021.0,female,Minutes attendance 2013-2021; seen as absent/present
-South Carolina,Spartanburg,Jonathan Adams,historical,2017.0,2019.0,male,Minutes attendance 2017-2019; seen as absent/present
-South Carolina,Spartanburg,Angela Viney,historical,2013.0,2015.0,female,Minutes attendance 2013-2015; seen as present
-South Carolina,Spartanburg,Heath Strawn,historical,2013.0,2015.0,male,Minutes attendance 2013-2015; seen as absent/present
-South Carolina,Spartanburg,Tracy Mccall,historical,2013.0,2013.0,unknown,Minutes attendance 2013; seen as absent/present
-South Carolina,Spartanburg,Andrew Hayes,historical,2013.0,2013.0,male,Minutes attendance 2013; seen as present
-South Carolina,Spartanburg,Gerald Lawson,historical,2004.0,2008.0,male,Minutes attendance 2004-2008; seen as present
-South Carolina,Spartanburg,Craig Sims,historical,2004.0,2008.0,male,Minutes attendance 2004-2008; seen as present
-South Carolina,Spartanburg,Kyle Atkins,historical,2004.0,2008.0,unknown,Minutes attendance 2004-2008; seen as absent/present
-South Carolina,Spartanburg,Michael Henthorne,historical,2008.0,2008.0,male,Minutes attendance 2008; seen as present
-South Carolina,Spartanburg,Les Green,historical,2008.0,2008.0,unknown,Minutes attendance 2008; seen as present
-South Carolina,Spartanburg,Gerald Noe,historical,2004.0,2008.0,male,Minutes attendance 2008; seen as present | Minutes attendance 2005; seen as present | Minutes attendance 2004; seen as present
-South Carolina,Spartanburg,David Long,historical,2008.0,2008.0,male,Minutes attendance 2008; seen as present
-South Carolina,Spartanburg,Jackie Moss,historical,2004.0,2008.0,unknown,Minutes attendance 2004-2008; seen as absent/present
-South Carolina,Spartanburg,Roy Pinckney,historical,2004.0,2008.0,male,Minutes attendance 2004-2008; seen as absent/present
-South Carolina,Spartanburg,Ray Morris,historical,2004.0,2005.0,unknown,Minutes attendance 2004-2005; seen as present
-South Carolina,Spartanburg,Ronnie Culbreth,historical,2004.0,2005.0,unknown,Minutes attendance 2004-2005; seen as present
-South Carolina,Spartanburg,Edwin Haskell,historical,,,male,
-South Carolina,Orangeburg,Yvonne Gooden Johnson,sitting,2026.0,2026.0,female,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,Moses Brown,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,William Weathers,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,Glenn Edwards,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,David Choi,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,Ralph (Al) Shaffer,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Orangeburg,Herbert Sellers,sitting,2026.0,2026.0,male,Minutes attendance 2026; seen as present
-South Carolina,Colleton,Anthony Bunton,sitting,,2030.0,male,Anthony Bunton January 2030 Member
-South Carolina,Colleton,William Drawdy,sitting,,2028.0,male,William Drawdy August 2028 Member
-South Carolina,Colleton,Michael Shane Moody,sitting,,2026.0,male,Michael Shane Moody July 2026 Member
-South Carolina,Colleton,Phillip Austin Rizer,sitting,,2028.0,male,Phillip Austin Rizer April 2028 Member
-South Carolina,Colleton,Mark Wysong,sitting,,2030.0,male,Mark Wysong January 2030 Member
+South Carolina,Richland,Shasai S. Hendrix Vice-chairman,sitting,,,unknown,"Chairman – Shasai S. Hendrix
+Vice-Chairman"
+South Carolina,Lexington,Charles Caughman,sitting,,,male,"2 Larry Brigham, Jr. Charles Caughman"
+South Carolina,Lexington,Debbie Heim,sitting,,,female,3 Darrell Hudson Debbie Heim
+South Carolina,Lexington,Kevin Eubanks,sitting,,,male,4 Todd Cockrell Kevin Eubanks
+South Carolina,Lexington,Keith Moore,sitting,,,male,6 Charlene Wessinger Keith Moore
+South Carolina,Lexington,V. Bruce Innocenti,sitting,,,male,7 Beth A. Carrigg V. Bruce Innocenti
+South Carolina,Lexington,Travis Spainhour,sitting,,,male,8 Glen M. Conwell Travis Spainhour
+South Carolina,Lexington,Carl Sherwood,sitting,,,male,9 M. Todd Cullum Carl Sherwood
+South Carolina,Lancaster,Charles Deese Development-Related Professional,sitting,,2028,male,"Charles Deese Development-Related Professional June 30, 2028"
+South Carolina,Chester,Wallace Hayes,historical,2025,2025,male,Minutes attendance 2025; seen as present
+South Carolina,Chester,Scott Thomas,historical,2025,2025,male,Minutes attendance 2025; seen as present
+South Carolina,Chester,Mickey Walley,historical,2025,2025,male,Minutes attendance 2025; seen as present
+South Carolina,Chester,Melvin Jackson,historical,2025,2025,male,Minutes attendance 2025; seen as present
+South Carolina,Chester,Teresa Skidmore,historical,2025,2025,female,Minutes attendance 2025; seen as present
+South Carolina,Chester,Teresa Skidmore (with Prior Notice),historical,2025,2025,female,Minutes attendance 2025; seen as absent
+South Carolina,Chester,Mike Mcbrayer,historical,,,male,
+South Carolina,Chester,Ella Spann,historical,,,female,
+South Carolina,Chester,Erin Mosley,historical,,,female,
+South Carolina,Chester,Jerry Mozingo,historical,,,male,
+South Carolina,Chester,Mike Wylie,historical,,,male,
+South Carolina,Berkeley,Richard W. Smith,historical,2010,2024,male,"# 1 MR. RICHARD W. SMITH (Chair) December 31, 2024 103Milton Drive Appt by P. Farley 5/24/10 Goose Creek, SC 29445 Re-appt by D. O"
+South Carolina,Berkeley,Nicole Burbage,historical,2022,2024,female,"# 2 MS. NICOLE BURBAGE December 31, 2024 911 Lazy C Lane Appt by J. Whitley 8/22/22 Moncks Corner, SC 29461 (C) 843-729-"
+South Carolina,Berkeley,Jim Mills,historical,2018,2024,male,"# 3 MR. JIM MILLS December 31, 2024 1400 Churchill Road Appt by K. Gunn 11/26/18 Moncks Corner, SC 29461 Re-appt by"
+South Carolina,Berkeley,Rick Melo,sitting,2023,2026,male,"# 4 MR. RICK MELO December 31, 2026 1116 Barnyard Road Appt by T. Newell 2/27/23 Bonneau, SC 29431 (c) 843-412-2166"
+South Carolina,Berkeley,Matthew Smith,sitting,2019,2026,male,"# 5 MR. MATTHEW SMITH December 31, 2026 113 Ashton Drive Appt by B. Cox 1/28/19 Goose Creek, SC 29445 Re-appt by A. Ste"
+South Carolina,Berkeley,Billy Sunday Joy,sitting,2019,2026,male,# 6 MR. BILLY SUNDAY JOY Appt by J. Schurlknight 9/23/19 116 Sparrow Street Re-appt by M. West 2/27/23 B
+South Carolina,Berkeley,Harold Jefferson,sitting,2001,2026,male,"# 7 MR. HAROLD JEFFERSON December 31, 2026 1157 Old Galliard Road Appt by C. Pinckney 10/15/01 Ridgeville, SC 29472 Re-app"
+South Carolina,Berkeley,Joseph Shirah,sitting,2014,2026,male,"# 8 MR. JOSEPH SHIRAH (Vice) December 31, 2026 125 Blanding Road Appt by S. Davis 5/27/14 St. Stephen, SC 29479 Re-appt by S. "
+South Carolina,Marion,Government Beautification,historical,2011,2014,unknown,Government Beautification Commission 2011-2014 Beautification Strategic Plan Beautification Maintenance Form Citizen Complaint Form Clean Up Sign Up Form Code Enforcement Citizen Participation Form Nu
+South Carolina,Marion,Beautification Strategic,historical,2011,2014,unknown,2011-2014 Beautification Strategic Plan
+South Carolina,Greenville,Alexander Ward,sitting,,2027,male,Alexander Ward 17 5/31/2027
+South Carolina,Greenville,Lisa Bracewell,sitting,,2028,female,Lisa Bracewell 17 5/31/2028
+South Carolina,Greenville,James Akers,sitting,,2029,male,James Akers 20 5/31/2029
+South Carolina,Greenville,Laura Godfrey,sitting,,2026,female,Laura Godfrey 21 11/30/2026
+South Carolina,Greenville,Brennan Stonerock,sitting,,2027,male,Brennan Stonerock 21 5/31/2027
+South Carolina,Greenville,Christopher Winters,sitting,,2027,male,Christopher Winters 21 5/31/2027
+South Carolina,Greenville,Josh Hakala,sitting,,2026,male,Josh Hakala 22 11/30/2026
+South Carolina,Greenville,John Boyanoski,sitting,,2027,male,John Boyanoski 23 5/31/2027
+South Carolina,Greenville,Michael Roth,sitting,,2029,male,Michael Roth 24 5/31/2029
+South Carolina,Florence,Brian Casey,sitting,,,male,"Brian Casey
+(Chairman)
+District 1"
+South Carolina,Florence,Jessica Wright,sitting,,,female,"Jessica Wright
+District 2"
+South Carolina,Florence,Brenda Deas,sitting,,,female,"Brenda Deas
+(Vice Chairman)
+District 3"
+South Carolina,Florence,Wesley Martin,sitting,,,male,"Wesley Martin
+District 4"
+South Carolina,Florence,Craig Floyd,sitting,,,male,"Craig Floyd
+District 5"
+South Carolina,Florence,Kenneth Muldrow,sitting,,,male,"Kenneth Muldrow
+District 6"
+South Carolina,Florence,Wallace Smith,sitting,,,male,"Wallace Smith
+District 8"
+South Carolina,Horry,Austin Graham,sitting,,2028,male,Austin Graham  06/30/2028
+South Carolina,Horry,Brantley Green,sitting,,2027,unknown,Brantley Green  06/30/2027
+South Carolina,Horry,Ciro M. Sebasco,sitting,,2027,male,Ciro M. Sebasco  06/30/2027
+South Carolina,Horry,Daniel Ober,sitting,,2027,male,Daniel Ober  06/30/2027
+South Carolina,Horry,James Baldwin IV,sitting,,2027,male,James Baldwin IV  06/30/2027
+South Carolina,Horry,Jerry Muchmore,sitting,,2028,male,Jerry Muchmore  06/30/2028
+South Carolina,Horry,Marion Shaw,sitting,,2027,female,Marion Shaw Chairman  06/30/2027
+South Carolina,Horry,Martin Dawsey,sitting,,2028,male,Martin Dawsey Vice Chairman  06/30/2028
+South Carolina,Horry,Melissa White,sitting,,2028,female,Melissa White  06/30/2028
+South Carolina,Beaufort,Baisch Gregory,historical,2012,2016,unknown,"Baisch, Gregory January 2012 - March 2016"
+South Carolina,Beaufort,Beil Peter F.,historical,1998,2001,unknown,"Beil, Peter F. September 1998 - April 2001"
+South Carolina,Beaufort,Bootle Charles W.,historical,2003,2009,unknown,"Bootle, Charles W. March 2003 - August 2009"
+South Carolina,Beaufort,Boysen Bruce H.,historical,2001,2004,unknown,"Boysen, Bruce H. April 2001 - March 2004"
+South Carolina,Beaufort,Chmelik Diane J.,historical,1999,2004,unknown,"Chmelik, Diane J. July 1999 - March 2004"
+South Carolina,Beaufort,DeMartin James L.,historical,1998,2004,unknown,"DeMartin, James L. September 1998 - September 2004"
+South Carolina,Beaufort,Gasparini Thomas A.,historical,2004,2020,unknown,"Gasparini, Thomas A. April 2004 - June 2020"
+South Carolina,Beaufort,Greenberger Stephen,historical,1998,2003,unknown,"Greenberger, Stephen September 1998 - February 2003"
+South Carolina,Beaufort,Ladson William,historical,1998,2001,unknown,"Ladson, William September 1998 - January 2001"
+South Carolina,Beaufort,LeRoy Phillip,historical,2004,2011,male,"LeRoy, Phillip September 2004 - August 2011"
+South Carolina,Beaufort,Mack Stanley,historical,1998,2002,male,"Mack, Stanley September 1998 - October 2002"
+South Carolina,Beaufort,Murray Gail,historical,2021,2021,male,"Murray, Gail May 2021 - October 2021"
+South Carolina,Beaufort,Olsen Sue,historical,1998,1999,unknown,"Olsen, Sue September 1998 - July 1999"
+South Carolina,Beaufort,Passiment Joseph,historical,2017,2018,unknown,"Passiment, Joseph January 2017 - December 2018"
+South Carolina,Beaufort,Rentz Tim,historical,2011,2015,unknown,"Rentz, Tim February 2011 - February 2015"
+South Carolina,Beaufort,Rivers Bernard,historical,2018,2021,unknown,"Rivers, Bernard November 2018 - February 2021"
+South Carolina,Beaufort,Samuel Brad,historical,1998,2000,male,"Samuel, Brad September 1998 - September 2000"
+South Carolina,Beaufort,Vineburgh James,historical,2015,2016,unknown,"Vineburgh, James May 26, 2015 - April 20, 2016"
+South Carolina,Beaufort,White Henry L.,historical,2001,2002,unknown,"White, Henry L. January 2001 - February 2002"
+South Carolina,Beaufort,Williams Chester,historical,2004,2022,unknown,"Williams, Chester April 2004 - February 2022"
+South Carolina,Beaufort,Williams Edgar,historical,2002,2018,unknown,"Williams, Edgar March 2002 - April 2018"
+South Carolina,Beaufort,Gregory Baisch,historical,2012,2016,male,"Baisch, Gregory
+January 2012 - March 2016"
+South Carolina,Beaufort,Peter F. Beil,historical,1998,2001,male,"Beil, Peter F.
+September 1998 - April 2001"
+South Carolina,Beaufort,Charles W. Bootle,historical,2003,2009,male,"Bootle, Charles W.
+March 2003 - August 2009"
+South Carolina,Beaufort,Bruce H. Boysen,historical,2001,2004,male,"Boysen, Bruce H.
+April 2001 - March 2004"
+South Carolina,Beaufort,Diane J. Chmelik,historical,1999,2004,female,"Chmelik, Diane J.
+July 1999 - March 2004"
+South Carolina,Beaufort,James L. Demartin,historical,1998,2004,male,"DeMartin, James L.
+September 1998 - September 2004"
+South Carolina,Beaufort,Thomas A. Gasparini,historical,2004,2020,male,"Gasparini, Thomas A.
+April 2004 - June 2020"
+South Carolina,Beaufort,Stephen Greenberger,historical,1998,2003,male,"Greenberger, Stephen
+September 1998 - February 2003"
+South Carolina,Beaufort,William Ladson,historical,1998,2001,male,"Ladson, William
+September 1998 - January 2001"
+South Carolina,Beaufort,Phillip Leroy,historical,2004,2011,male,"LeRoy, Phillip
+September 2004 - August 2011"
+South Carolina,Beaufort,Stanley Mack,historical,1998,2002,male,"Mack, Stanley
+September 1998 - October 2002"
+South Carolina,Beaufort,Gail Murray,historical,2021,2021,unknown,"Murray, Gail
+May 2021 - October 2021"
+South Carolina,Beaufort,Sue Olsen,historical,1998,1999,female,"Olsen, Sue
+September 1998 - July 1999"
+South Carolina,Beaufort,Joseph Passiment,historical,2017,2018,male,"Passiment, Joseph
+January 2017 - December 2018"
+South Carolina,Beaufort,Tim Rentz,historical,2011,2015,male,"Rentz, Tim
+February 2011 - February 2015"
+South Carolina,Beaufort,Bernard Rivers,historical,2018,2021,male,"Rivers, Bernard
+November 2018 - February 2021"
+South Carolina,Beaufort,Brad Samuel,historical,1998,2000,male,"Samuel, Brad
+September 1998 - September 2000"
+South Carolina,Beaufort,James Vineburgh,historical,2015,2016,male,"Vineburgh, James
+May 26, 2015 - April 20, 2016"
+South Carolina,Beaufort,Henry L. White,historical,2001,2002,male,"White, Henry L.
+January 2001 - February 2002"
+South Carolina,Beaufort,Chester Williams,historical,2004,2022,male,"Williams, Chester
+April 2004 - February 2022"
+South Carolina,Beaufort,Edgar Williams,historical,2002,2018,male,"Williams, Edgar
+March 2002 - April 2018"
+South Carolina,Abbeville,William Gilmer,sitting,2025,2029,male,William Gilmer District 1 11/2025-11/2029
+South Carolina,Abbeville,Andrew Oliver,sitting,2025,2029,male,Andrew Oliver District 4 08/2025-08-2029
+South Carolina,Abbeville,Virginia Boyd,sitting,2025,2029,female,Virginia Boyd District 5 08/2025 – 08/2029
+South Carolina,Abbeville,Conway Shirley,sitting,2023,2027,male,Conway Shirley District 6 04/2023 – 04/2027
+South Carolina,Abbeville,Marilyn Little,sitting,2024,2028,female,Marilyn Little District 7 01/2024 – 01/2028
+South Carolina,Abbeville,James Covan,sitting,2023,2027,male,James Covan District 1 03/2023-03/2027
+South Carolina,Abbeville,Anna Hendrix,sitting,2025,2029,female,Anna Hendrix District 2 12/2025-12/2029
+South Carolina,Abbeville,Raymond Vandiver,historical,2021,2025,male,Raymond Vandiver District 4 11/2021 – 11/2025
+South Carolina,Abbeville,Steven Beauford,sitting,2022,2026,male,Steven Beauford District 5 11/2022 – 11/2026
+South Carolina,Abbeville,John Thomas Wilson,sitting,2026,2030,male,John Thomas Wilson District 6 01/2026-01/2030
+South Carolina,Abbeville,Amos Cunningham,sitting,2023,2027,male,Amos Cunningham District 7 04/2023 – 04/2027
+South Carolina,Abbeville,Doris Starks,sitting,2022,2026,female,Doris Starks District 2 01/2022-01/2026
+South Carolina,Abbeville,Michael Bull,sitting,2024,2028,male,Michael Bull District 4 10/2024-10/2028
+South Carolina,Abbeville,Diane Gillespie,sitting,2025,2029,female,Diane Gillespie District 5 06/2025-06/2029
+South Carolina,Abbeville,James Bowen,sitting,2025,2029,male,James Bowen District 6 05/2025-05/2029
+South Carolina,Abbeville,Patrick Davenport,sitting,2025,2029,male,Patrick Davenport District 7 12/2025-12/2029
+South Carolina,Abbeville,Colby McNeil,sitting,2026,2030,male,Colby McNeil District 1 05/2026-05/2030
+South Carolina,Abbeville,David Andres Weaver,sitting,2024,2028,male,David Andres Weaver District 2 06/2024-06/2028
+South Carolina,Abbeville,Simon Allen,sitting,2024,2028,male,Simon Allen District 3 11/2024-11/2028
+South Carolina,Abbeville,Donny Ray,sitting,2025,2029,unknown,Donny Ray District 4 04/2025-04/2029
+South Carolina,Abbeville,Matthew Hembree,sitting,2023,2027,male,Matthew Hembree District 5 03/2023-03/2027
+South Carolina,Abbeville,Horace Thomas,sitting,2023,2027,male,Horace Thomas District 6 06/2023-06/2027
+South Carolina,Abbeville,Pete Sopolosky,sitting,2022,2026,male,Pete Sopolosky District 7 10/2022-10/2026
+South Carolina,Abbeville,Steve Ellis,historical,2021,2025,male,Steve Ellis District 5 04/2021 – 04/2025
+South Carolina,Abbeville,Eula Marlene Partain,sitting,2024,2028,female,Eula Marlene Partain District 6 01/2024 – 01/2028
+South Carolina,Abbeville,Susie New,sitting,2022,2026,female,Susie New District 4 11/2022 – 11/2026
+South Carolina,Abbeville,April Davis,sitting,2024,2028,female,April Davis District 1 09/2024-09/2028
+South Carolina,Abbeville,John T. Calhoun,sitting,2023,2026,male,John T. Calhoun Non-Elected 02/2023 – 02/2026
+South Carolina,Abbeville,Charlie Henry,historical,2022,2025,unknown,Charlie Henry Minority 03/2022 – 03/2025
+South Carolina,Abbeville,Charles Goodwin,sitting,,,male,Charles Goodwin Elected Indefinite
+South Carolina,Calhoun,Barry Hill Chairman,sitting,,,male,Barry Hill (Chairman) District 3
+South Carolina,Calhoun,Ray Keitt Vice Chairman,sitting,,,male,Ray Keitt (Vice Chairman) District 5
+South Carolina,Calhoun,Josh Johnson,sitting,,,male,Josh Johnson District 1
+South Carolina,Calhoun,Josh Rabon,sitting,,,male,Josh Rabon District 2
+South Carolina,Calhoun,Tamesha Gilmore,sitting,,,unknown,Tamesha Gilmore District 4
+South Carolina,Calhoun,David Stack,sitting,,,male,David Stack District 5
+South Carolina,Calhoun,Robert Jeffcoat,sitting,,,male,Robert Jeffcoat District 3
+South Carolina,Calhoun,Steve Turkvan,sitting,,,male,Steve Turkvan District 2
+South Carolina,Calhoun,Herbert Edmond,sitting,,,male,Herbert Edmond District 2
+South Carolina,Calhoun,Steve Tyson,sitting,,,male,Steve Tyson District 4
+South Carolina,Anderson,From: Henry Youmans Subject: January 12,historical,2023,2023,male,Minutes attendance 2023; seen as present
+South Carolina,Anderson,At 5:15 Pm At The Historic Courthouse,historical,2023,2023,female,Minutes attendance 2023; seen as present
+South Carolina,Anderson,From: Henry Youmans Subject: March 9,historical,2023,2023,male,Minutes attendance 2023; seen as present
+South Carolina,Anderson,Hubert Mcclure,historical,,,male,
+South Carolina,Anderson,Mike Miller,historical,,,male,
+South Carolina,Anderson,John Farr,historical,,,male,
+South Carolina,Anderson,Russ Brown,historical,,,male,
+South Carolina,Anderson,Tony Cirelli,historical,,,male,
+South Carolina,Anderson,Debbie Chapman,historical,,,female,
+South Carolina,Anderson,Russell Barton,historical,,,male,
+South Carolina,Anderson,Brad Swillen,historical,,,male,
+South Carolina,Orangeburg,Yvonne Gooden Johnson,historical,,,female,
+South Carolina,Orangeburg,Moses Brown,historical,,,male,
+South Carolina,Orangeburg,William Weathers,historical,,,male,
+South Carolina,Orangeburg,Glenn Edwards,historical,,,male,
+South Carolina,Orangeburg,David Choi,historical,,,male,
+South Carolina,Orangeburg,Ralph (Al) Shaffer,historical,,,male,
+South Carolina,Orangeburg,Herbert Sellers,historical,,,male,
+South Carolina,Georgetown,Comprehensive Plan,historical,,2020,unknown," Comprehensive Plan --2020 Update Georgetown County is in the process of updating its comprehensive plan. Get notifications when new draft elements are posted, public input meetings are scheduled and "
+South Carolina,Spartanburg,Man Angela Geter,sitting,2018,2030,female,"District #1 Angela L. Geter 772 Fulton Avenue Spartanburg, SC  29303 (H) 864-583-2047 03/19/18 02/16/26 01/17/30 | Minutes attendance 2023-2026; seen as present | Minutes attendance 2024-2025; seen as present"
+South Carolina,Spartanburg,M. Steve Hammett,sitting,2026,2030,male,"District #2 M. Steve Hammett 541 Fagan Drive Inman, SC 29349 (H) 864-205-2744 06/15/26 06/15/26 06/15/30"
+South Carolina,Spartanburg,Wallace Jason Patrick,sitting,2012,2028,male,"District #3 Wallace Jason Patrick 330 Round Ridge Road Spartanburg, SC 2932 (B) 864-585-2000 05/21/12 01/22/24 01/17/28 | Minutes attendance 2025; seen as absent"
+South Carolina,Spartanburg,Angela Geter Louise Rakes Kae Fleming Thomas Davies,sitting,2010,2027,female,"District #4 Thomas Albert Davies 380 Mary Hanna Road Woodruff, SC 29388 (H) 864-969-3330 (B) 864-706-5534 03/15/10 01/23/23 01/17/27 | Minutes attendance 2019; seen as present | Minutes attendance 2013-2014; seen as present"
+South Carolina,Spartanburg,James David Langford Jr.,sitting,2023,2027,male,"District #5 James David Langford Jr. 135 N. Blackstock Road Landrum, SC  29356 (H) 864-316-5782 (B) 864-457-2157 01/23/23 01/23/23 01/17/27 | Minutes attendance 2024; seen as absent"
+South Carolina,Spartanburg,Jackie Ray Crotts,sitting,2023,2029,male,"District #6 Jackie ""Ray"" Crotts 146 Emily Drive Moore, SC  29369 (B) 864-576-1000 05/15/23 02/17/25 02/17/29"
+South Carolina,Spartanburg,Jonathan Adams Michael Padgett Jack Gowan,sitting,2013,2027,male,"At Large Jack D. Gowan, Jr. 4 Celeste Court Spartanburg, SC 29301 10/21/13 01/23/23 01/17/27 | Minutes attendance 2017-2026; seen as present | Minutes attendance 2016; seen as present | Minutes attendance 2015; seen as present"
+South Carolina,Spartanburg,Stephen J. Wunder,sitting,2022,2030,male,"At Large Stephen J. Wunder 606 Mount Vernon Lane Duncan, SC  29334 (B) 864-398-4444 02/21/22 12/08/25 01/17/30 | Minutes attendance 2026; seen as absent"
+South Carolina,Spartanburg,Michael Erik Horton,sitting,2026,2030,male,"At Large Michael ""Erik"" Horton 900 N. Trade Avenue Ext. Landrum, SC 29356 (H) 864-884-2158 05/18/26 05/18/26 5/18/30"
+South Carolina,Spartanburg,Departments Administration,historical,2010,2015,unknown,Departments Administration Accommodations Tax Communications Animal Welfare Services Animal Control Recent Animal Pick-Ups Breeder's Licensing Information Lost & Found Trap Neuter Release (TNR) Progra
+South Carolina,Spartanburg,Legislative Delegation,historical,2010,2015,unknown,Legislative Delegation Delegation Meeting Agendas and Minutes CTC Meeting  Agendas and Minutes CTC Meeting Minutes (2010-2015) Delegation Meeting Minutes (2010 - 2018)
+South Carolina,Spartanburg,Chairm An Angela Geter,historical,2024,2024,female,Minutes attendance 2024; seen as present
+South Carolina,Spartanburg,Michael Padgett,historical,2017,2022,male,Minutes attendance 2017-2022; seen as present
+South Carolina,Spartanburg,Jason Patrick Jonathan Adams Marion Gramling,historical,2010,2022,male,Minutes attendance 2010-2022; seen as absent/present | Minutes attendance 2019; seen as absent
+South Carolina,Spartanburg,Louise Rakes Glenda Brady,historical,2021,2022,female,Minutes attendance 2022; seen as absent | Minutes attendance 2021; seen as absent
+South Carolina,Spartanburg,Jason Patrick Jonathan Adams,historical,2018,2019,male,Minutes attendance 2019; seen as absent | Minutes attendance 2018; seen as absent
+South Carolina,Spartanburg,Angela Viney,historical,2014,2015,female,Minutes attendance 2014-2015; seen as present
+South Carolina,Spartanburg,Jr. Thomas Davies Kae Fleming Jason Patrick Louise Rakes,historical,2014,2015,male,Minutes attendance 2015; seen as present | Minutes attendance 2014; seen as absent
+South Carolina,Spartanburg,Heath Strawn,historical,2013,2015,male,Minutes attendance 2013-2015; seen as absent/present
+South Carolina,Spartanburg,Ronald Stokes Tracy Mccall,historical,2012,2013,male,Minutes attendance 2012-2013; seen as absent | Minutes attendance 2012; seen as absent
+South Carolina,Spartanburg,Jackie Moss Kyle Atkins,historical,2004,2011,female,Minutes attendance 2004-2011; seen as absent/present | Minutes attendance 2007; seen as absent
+South Carolina,Spartanburg,Jim Brannon Jackie Moss,historical,2007,2011,male,Minutes attendance 2011; seen as absent | Minutes attendance 2007-2010; seen as absent/present
+South Carolina,Spartanburg,Ronald Stokes Kyle Atkins Jim Brannon Gerald Noe David Long,historical,2010,2010,male,Minutes attendance 2010; seen as present
+South Carolina,Spartanburg,Gerald Noe Michael Henthorn,historical,2009,2009,male,Minutes attendance 2009; seen as absent
+South Carolina,Spartanburg,Gerald Lawson Craig Sims Jackie Moss,historical,2009,2009,male,Minutes attendance 2009; seen as absent
+South Carolina,Spartanburg,Jackie Moss Roy Pinckney,historical,2004,2008,male,Minutes attendance 2004-2008; seen as absent
+South Carolina,Spartanburg,Gerald Lawson,historical,2004,2007,male,Minutes attendance 2004-2007; seen as present
+South Carolina,Spartanburg,Ronnie Culbreth,historical,2006,2006,unknown,Minutes attendance 2006; seen as absent
+South Carolina,Spartanburg,Ronnie Culbreth Ray Morris,historical,2006,2006,male,Minutes attendance 2006; seen as absent
+South Carolina,Spartanburg,Gerald Noe,historical,,,male,
+South Carolina,Spartanburg,Craig Sims,historical,,,male,
+South Carolina,Spartanburg,Les Green,historical,,,unknown,
+South Carolina,Spartanburg,Ronald Stokes,historical,,,male,
+South Carolina,Spartanburg,Jim Brannon,historical,,,male,
+South Carolina,Spartanburg,Travis Tuten,historical,,,male,
+South Carolina,Spartanburg,Kae Fleming,historical,,,female,
+South Carolina,Spartanburg,Andrew Hayes,historical,,,male,
+South Carolina,Jasper,Jeff Richardson; Vice Chairwoman,historical,2022,2023,male,Minutes attendance 2022-2023; seen as present
+South Carolina,Jasper,Carmen Malphrus; Ms. Barbara Bartoldus,historical,2022,2023,female,Minutes attendance 2022-2023; seen as present
+South Carolina,Jasper,Ms. Frances Chalmers,historical,2023,2023,female,Minutes attendance 2023; seen as present
+South Carolina,Jasper,Mr. Scott Cuff,historical,2022,2022,male,Minutes attendance 2022; seen as present
+South Carolina,Jasper,Mr. Jeff Richardson,historical,2018,2018,male,Minutes attendance 2018; seen as present
+South Carolina,Jasper,Ms. Barbara Bartoldus,historical,2018,2018,female,Minutes attendance 2018; seen as present
+South Carolina,Jasper,Ms. Carmen Malphrus,historical,2018,2018,female,Minutes attendance 2018; seen as present
+South Carolina,Colleton,Anthony Bunton,sitting,,2030,male,Anthony Bunton January 2030 Member
+South Carolina,Colleton,William “billy” Drawdy. (S),sitting,2021,2028,male,William Drawdy August 2028 Member | Minutes attendance 2021-2025; seen as absent/present
+South Carolina,Colleton,Michael Shane Moody,sitting,2023,2026,male,Michael Shane Moody July 2026 Member | Minutes attendance 2023-2024; seen as present
+South Carolina,Colleton,Phillip Austin Rizer,sitting,2021,2028,male,Phillip Austin Rizer April 2028 Member | Minutes attendance 2024-2025; seen as absent/present | Minutes attendance 2022-2023; seen as absent/present | Minutes attendance 2021; seen as absent
+South Carolina,Colleton,Mark Wysong,sitting,,2030,male,Mark Wysong January 2030 Member
+South Carolina,Colleton,Douglas Mixson Jr,historical,2021,2025,male,Minutes attendance 2021-2025; seen as absent/present
+South Carolina,Colleton,And Samuel C. Bethay (S),historical,2022,2025,male,Minutes attendance 2022-2025; seen as present | Minutes attendance 2024; seen as absent/present
+South Carolina,Colleton,And Shane Moody (S),historical,2024,2025,male,Minutes attendance 2024-2025; seen as present
+South Carolina,Colleton,"Douglas Mixson, Jr.",historical,,,male,
+South Carolina,Newberry,Hugh Lister,sitting,,2028,male,"District 1 Hugh Lister December 31, 2028"
+South Carolina,Newberry,Wayne Boland,sitting,,2028,male,"District 2 Wayne Boland December 31, 2028"
+South Carolina,Newberry,Patrick Meetze,sitting,,2028,male,"District 3 Patrick Meetze December 31, 2028"
+South Carolina,Newberry,Doug Hipp,sitting,,2028,male,"District 4 Doug Hipp, Chairman December 31, 2028"
+South Carolina,Newberry,Ty Ransdell,sitting,,2029,male,"District 5 Ty Ransdell December 31, 2029"
+South Carolina,Newberry,Chauncey Hardrick,sitting,,2028,male,"District 6 Chauncey Hardrick December 31, 2028"
+South Carolina,Newberry,Patrick Wilkes,sitting,,2029,male,"District 7 Patrick Wilkes December 31, 2029"
+South Carolina,Newberry,Secret: Doug Hipp Laurel Keen,historical,2023,2023,male,Minutes attendance 2023; seen as present
+South Carolina,Newberry,Administrative Support Ty Ransdell Jerry Whitfield,historical,2023,2023,male,Minutes attendance 2023; seen as present
+South Carolina,Newberry,Applic: George Mcconnell,historical,2023,2023,male,Minutes attendance 2023; seen as present
+South Carolina,Newberry,Torchia Werts,historical,,,unknown,
+South Carolina,Newberry,Sam Ziady,historical,,,unknown,
+South Carolina,Oconee,Gwen Fowler,sitting,,,female,Gwen Fowler District 2
+South Carolina,Oconee,Bill Gilster,sitting,,,male,Bill Gilster District 3
+South Carolina,Oconee,Jason Cox,sitting,,,male,Jason Cox District 4
+South Carolina,Oconee,Chad Overholt,sitting,,,male,Chad Overholt District 5
+South Carolina,Oconee,Motion To Nominate John,sitting,,,unknown,Chairman – Motion to nominate John
+South Carolina,Oconee,John Eager Made,sitting,,,male,Vice Chairman – John Eager made
+South Carolina,Oconee,Bill Gillster Jim Codner John Eagar Charles Morgan,historical,2020,2020,male,Minutes attendance 2020; seen as present
+South Carolina,Oconee,Mrs. Fowler Mr. Gilster Mr. Mckee Mr. Honea Mr. Morgan,historical,2017,2019,unknown,Minutes attendance 2019; seen as present | Minutes attendance 2017; seen as present
+South Carolina,Oconee,Mrs. Fowler Mr. Gilster Mr. Medford Mr. Mckee Mr. Lusk,historical,2018,2018,male,Minutes attendance 2018; seen as present
+South Carolina,Oconee,Mr. Gilster Mr. Lee Mr. Mckee Mr. Medford Mr. Nichols,historical,2015,2015,male,Minutes attendance 2015; seen as present
+South Carolina,Oconee,Wgog Item 1,historical,2010,2010,unknown,Minutes attendance 2010; seen as present
+South Carolina,Oconee,Jim Codner,historical,,,male,
+South Carolina,Oconee,John Eagar,historical,,,male,
+South Carolina,Oconee,Mr. Mckee,historical,,,male,
+South Carolina,Oconee,Mr. Honea,historical,,,unknown,
+South Carolina,Oconee,Mr. Medford,historical,,,male,
+South Carolina,Oconee,Mr. Lee,historical,,,male,
+South Carolina,Oconee,Mr. Menzies,historical,,,unknown,
+South Carolina,Oconee,Mr. Reckert,historical,,,unknown,
+South Carolina,Oconee,Mr. Hughes,historical,,,male,
+South Carolina,Oconee,Gary Littlefield,historical,,,male,
+South Carolina,Oconee,Sam Lee,historical,,,unknown,
+South Carolina,Oconee,Paul Reckert,historical,,,male,
+South Carolina,Oconee,Mike Willimon,historical,,,male,
+South Carolina,Oconee,Gary Winters,historical,,,male,
+South Carolina,Oconee,Eric Molin,historical,,,male,
+South Carolina,Oconee,Berry Nichols,historical,,,male,
+South Carolina,Oconee,Clark Wilmont,historical,,,male,
+South Carolina,Oconee,Mr. Wilmont,historical,,,male,
+South Carolina,Oconee,Mr. Molin,historical,,,male,
+South Carolina,Oconee,Aaron Gadsby,historical,,,male,
