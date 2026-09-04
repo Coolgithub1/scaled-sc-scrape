@@ -1084,7 +1084,11 @@ def _is_minutes_document(url, link_text="", content=None):
             r"|staff\s+present"
             r"|(?:^|\n)\s*present\s*:"
             r"|(?:^|\n)\s*absent\s*:"
-            r"|commission(?:ers?)?\s+present",
+            r"|commission(?:ers?)?\s+present"
+            r"|were\s+present"
+            r"|were\s+absent"
+            r"|board members?\s*[–—:-].{0,200}?\bpresent\b"
+            r"|minutes of the meeting",
             content[:3500],
         ):
             return False
@@ -1624,13 +1628,34 @@ def parse_minutes_attendance(text):
     Chester-style minutes use:
         Present: Chairman Wallace Hayes, ...
         Absent: none.
+    Sumter-style prose minutes use:
+        Seven board members –Mr. A, Mr. B were present. Mr. C were absent.
     Returns a list of {name, attendance} dicts (attendance = present|absent|unknown).
     """
     head = _attendance_header(text)
     if not head:
         return []
+
+    # Sumter prose: "... board members – Name, Name were present. Name were absent."
+    prose = re.search(
+        r"(?is)board members?\s*[–—:-]\s*(.*?)\bwere\s+present\b"
+        r"(?:\.|\s)+(.*?)\bwere\s+absent\b",
+        head,
+    )
+    if prose:
+        present_names = _parse_attendance_names(prose.group(1))
+        absent_names = _parse_attendance_names(prose.group(2))
+        present_keys = {_norm_name_key(n) for n in present_names}
+        out = [{"name": n, "attendance": "present"} for n in present_names]
+        for n in absent_names:
+            if _norm_name_key(n) not in present_keys:
+                out.append({"name": n, "attendance": "absent"})
+        if out:
+            return out
+
     if not re.search(
-        r"(?i)\bmembers?\b|(?:^|\n)\s*present\s*:|commission(?:ers?)?\s+present",
+        r"(?i)\bmembers?\b|(?:^|\n)\s*present\s*:|commission(?:ers?)?\s+present|"
+        r"were\s+present",
         head,
     ):
         return []
