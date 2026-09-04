@@ -1,0 +1,101 @@
+rank,company,email,segment,why_they_buy,source
+1,Zoneomics,info@zoneomics.com,Zoning PropTech,Licenses nationwide zoning intelligence and already partners with Crexi and Redfin. A SC BZA-member layer tells their users who decides variances.,https://www.linkedin.com/company/zoneomics
+2,Gridics,info@gridics.com,Zoning PropTech,Sells parcel-level zoning data to cities and developers. Board-member identity is the missing decision-maker layer on top of code text.,https://www.facebook.com/gridics/
+3,LightBox,sales@lightboxre.com,Zoning PropTech,Sells zoning data APIs and bulk downloads to CRE and planners. BZA roster data complements their zoning classifications.,https://www.linkedin.com/company/lightbox-re
+4,Regrid,marketing@regrid.com,Zoning PropTech,Already partnered with Zoneomics on parcel plus zoning. Historic and current BZA members enrich their land-use product.,https://regrid.com/press
+5,HouseCanary,sales@housecanary.com,Zoning PropTech,Enterprise property data buyer. Variance-board composition is a risk input for development underwriting.,https://www.housecanary.com/images/659f346027952f9be04f792f_hc_product-sheet_bulk-property-data.pdf
+6,BuildZoom,info@buildzoom.com,Zoning PropTech,Permit and construction intelligence. Knowing who sits on county BZAs helps predict entitlement friction.,https://www.facebook.com/buildzoom/
+7,CompStak,info@compstak.com,CRE data,CRE comps platform that could license civic official data as a due-diligence add-on for SC deals.,https://www.linkedin.com/company/compstak
+8,Crexi,press@crexi.com,CRE marketplace,Already added Zoneomics zoning to Crexi Intelligence. BZA members are the next local-politics layer for SC listings.,https://www.crexi.com/blog/crexi-intelligence-zoning-tenant-traffic-data
+9,Cherre,press@cherre.com,CRE data,Real estate data integration platform. Board-member directories are a natural civic join key on parcels.,https://blog.cherre.com/2024/09/16/cherre-expands-strategic-partnership-with-nuveen-real-estate-to-unlock-new-capabilities/
+10,CoStar Group,mblocher@costar.com,CRE data,Largest CRE information company. A statewide SC appeals-board directory is a civic overlay for LoopNet/CoStar research.,https://www.costargroup.com/press-room/2026/apartmentscom-releases-multifamily-rent-growth-report-april-2026
+11,PropertyShark,corporate-sales@propertyshark.com,CRE data,Sells property research including zoning. Decision-maker names make SC reports more useful to brokers and attorneys.,https://www.propertyshark.com/mason/Subscriptions2/
+12,BatchData,sales@batchdata.com,PropTech data,Bulk property data API. Could resell or append SC BZA members to skip-trace and site-research feeds.,https://batchdata.io/llms.txt
+13,Precisely,info@precisely.com,Location data,Enterprise location-data licensor. Public-official layers sit next to their address and boundary products.,https://www.linkedin.com/company/preciselydata
+14,Cotality,newsmedia@cotality.com,Property data,Former CoreLogic property-data giant. Civic board rosters fit insurance and CRE risk products.,https://www.cotality.com/newsroom
+15,Esri,info@esri.com,GIS,ArcGIS is the default map stack for planners. A BZA member feature class is an easy SC civic layer.,https://www.linkedin.com/company/esri
+16,ATTOM Data,datacustomercare@attomdata.com,Property data,Multi-sources civic and property records. Board membership is a natural add to their neighborhood and tax layers.,https://support.attomdata.com/articles/3279938807-frequently-asked-questions
+17,UrbanFootprint,press@urbanfootprint.com,Location intelligence,Now under LightBox. Urban planning models benefit from knowing local appeals-board makeup.,https://urbanfootprint.com/
+18,EagleView,mediarelations@eagleview.com,Geospatial,Aerial and property intelligence for government and insurers. Officials data supports their government vertical.,https://www.eagleview.com/contact-us/
+19,Nearmap,taylor.cenicola@nearmap.com,Geospatial,Aerial imagery plus location intel. SC development users ask who can grant a variance before they fly a site.,https://review.nmws.nearmap.com/newsroom
+20,CivicPlus,info@civicplus.com,GovTech,Hosts many SC county agenda and roster pages this scraper already read. They could productize structured board data.,https://www.linkedin.com/company/civicplus
+21,OpenGov,contact@opengov.com,GovTech,Permitting and civic-ops software. Structured BZA directories help their community-development module.,https://www.linkedin.com/company/opengov-inc
+22,Tyler Technologies,info@tylertech.com,GovTech,Largest local-gov software vendor. Board and commission data is already in their civic stack.,https://directory.partner.io/tylertech-com
+23,Granicus,support@granicus.com,GovTech,Owns agenda/minutes and boards-and-commissions software used by counties. They buy or scrape the same source material.,https://www.linkedin.com/company/granicusinc
+24,Accela,media@accela.com,GovTech,Civic permitting platform. Knowing sitting BZA members helps staff and applicants inside their workflow.,https://www.accela.com/about/press-releases/
+25,FiscalNote,press@fiscalnote.com,Policy intelligence,Tracks local officials and policy. County zoning-board members are local influentials their customers want.,https://www.signalhire.com/companies/fiscalnote
+26,Quorum,info@quorum.us,Policy intelligence,Sells verified policymaker contact graphs. SC BZA members extend their local-official coverage.,https://www.linkedin.com/company/quorum-analytics-inc-
+27,Ballotpedia,editor@ballotpedia.org,Civic data,Public-official encyclopedia. A cleaned 32-county BZA index is directly ingestible.,https://news.ballotpedia.org/about/
+28,Plural Policy,support@pluralpolicy.com,Policy intelligence,Legislative and local-policy tracker used by lobbyists and associations. Board composition is local influence data.,https://help.pluralpolicy.com/how-to-contact-support
+29,ClearGov,info@cleargov.com,GovTech,Local-government transparency software. Appointed-board directories fit their civic-data product.,https://www.linkedin.com/company/cleargov
+30,iWorQ Systems,sales@iworq.com,GovTech,Community-development and permitting software for smaller cities and counties. SC coverage is a sales wedge.,https://iworq.com/contact/
+31,OpenCounter,hello@opencounter.com,GovTech,Guides applicants through local approvals. Showing who sits on the BZA is a product feature.,https://www.linkedin.com/company/opencounter
+32,McCullough Khan LLC,info@mklawsc.com,SC land-use law,Charleston land-use litigators who appear on variances and BZA appeals. Direct end user of a current roster.,https://www.mklawsc.com/practice-areas/land-use-litigation/
+33,Haynsworth Sinkler Boyd,kyates@hsblawfirm.com,SC land-use law,Statewide SC firm whose planning and zoning lawyers appear before county zoning boards.,https://www.hsblawfirm.com/about/firm-administration
+34,Maynard Nexsen,TEmerson@maynardnexsen.com,SC land-use law,One of the largest SC firms. Zoning and economic-development lawyers need board composition before hearings.,https://www.maynardnexsen.com/newsroom-media
+35,Burr & Forman,kwhitaker@burr.com,SC land-use law,Absorbed McNair. Regular counsel to industry and developers on SC local zoning.,https://www.burr.com/newsroom/media
+36,Wyche P.A.,wyche@wyche.com,SC land-use law,Greenville firm with environmental and development work across the Upstate.,https://www.linkedin.com/company/wychepa
+37,Nelson Mullins,info@nelsonmullins.com,SC land-use law,Columbia-based Am Law firm. Real estate and economic-development practices appear before SC boards.,https://www.nelsonmullins.com/privacy_policy
+38,Womble Bond Dickinson,info@wbd-us.com,Land-use law,Carolinas firm with real estate and land-use work that crosses into SC counties.,https://www.womblebonddickinson.com/us/contact
+39,Moore & Van Allen,nancysmith@mvalaw.com,Land-use law,Charlotte firm active in Carolinas development. SC BZA names help their zoning diligence.,https://www.mvalaw.com/contact-media
+40,Adams and Reese,laura.sillars@arlaw.com,Land-use law,Regional firm with SC offices and a real estate practice that handles local approvals.,https://www.adamsandreese.com/our-firm/leadership
+41,Robinson Gray,bgrabski@robinsongray.com,SC land-use law,Columbia firm with real estate and local-government work. Direct user of county board rosters.,https://robinsongray.com/contact/
+42,Pope Flynn,inquiries@popeflynn.com,SC land-use law,Columbia public-finance and local-government boutique. Board membership is core client intelligence.,https://popeflynn.com/contact/
+43,Gallivan White & Boyd,info@gwblawfirm.com,SC land-use law,Upstate SC firm. Development and litigation clients need to know who sits on Greenville-area BZAs.,https://www.gwblawfirm.com/contact/
+44,McGuireWoods,info@mcguirewoods.com,Land-use law,National firm with Carolinas real estate. Uses local official data in site and entitlement work.,https://www.mcguirewoods.com/legal-notices/
+45,Troutman Pepper Locke,tpl@troutman.com,Land-use law,Southeast real estate and land-use practice. SC county decision-makers are diligence inputs.,https://www.troutman.com/contact-us/
+46,Turner Padget,info@turnerpadget.com,SC land-use law,SC firm that advertises rezoning, variances, and special-exception work before local boards.,https://barlist.com/law-firms/details/2401/turner-padget-graham-and-laney-pa
+47,Parker Poe,ashleycooper@parkerpoe.com,SC land-use law,Charleston/Columbia offices. Regular counsel on Carolinas land development and local approvals.,https://dms.psc.sc.gov/Attachments/Matter/e703b6a3-5c12-4bb5-9f73-eab858b06f01
+48,Kimley-Horn,info@kimley-horn.com,Planning engineering,National land-development engineers with SC offices. Entitlement teams brief clients on BZA makeup.,https://www.linkedin.com/company/kimley-horn
+49,Thomas & Hutton,info@thomasandhutton.com,Planning engineering,Lowcountry and statewide civil engineers who walk projects through county planning and BZA.,https://www.linkedin.com/company/thomas-&-hutton
+50,SeamonWhiteside,jmunday@seamonwhiteside.com,Planning engineering,SC land-design firm in Charleston, Greenville, Columbia, and Spartanburg. Daily BZA users.,https://seamonwhiteside.com/
+51,Alliance Consulting Engineers,allianceCE@allianceCE.com,Planning engineering,Columbia-based civil engineers doing industrial and residential entitlements across SC counties.,https://www.alliancece.com/images/news/profiles_in_business_ACE.pdf
+52,ESP Associates,info@espassociates.com,Planning engineering,Carolinas engineering and planning. Charleston office works SC coastal entitlements.,https://espassociates.com/contact/
+53,ADC Engineering,info@adcengineering.com,Planning engineering,Charleston-area civil firm. County BZA composition is a standard entitlement brief.,https://www.linkedin.com/company/adc-engineering-inc
+54,Stantec,media@stantec.com,Planning engineering,National planner/engineer with Southeast land-development work that hits county appeals boards.,https://www.stantec.com/en/about/contact-us/contact-our-media-team
+55,AECOM,media@aecom.com,Planning engineering,Global A/E firm. Site and infrastructure teams need local decision-maker context in SC.,https://aecom.com/press-releases/
+56,Tetra Tech,info@tetratech.com,Planning engineering,Environmental and land-development consultant. Variance-board identity is a permitting risk input.,https://www.tetratech.com/contact/
+57,LandDesign,contactclt@landdesign.com,Planning engineering,Charlotte planning and landscape firm working Carolinas development. SC county boards matter.,https://landdesign.com/contact/
+58,Mead & Hunt,mailbox@meadhunt.com,Planning engineering,Planning and aviation/land consultants. Local board intelligence supports public and private clients.,https://www.linkedin.com/company/mead-&-hunt
+59,Woolpert,emerald.volk@woolpert.com,Planning geospatial,Strong SC geospatial and planning practice. Could license BZA members as a civic GIS layer.,https://www.federalplanningworkshop.org/sponsor-exhibitor-directory
+60,HDR,kevin.keller@hdrinc.com,Planning engineering,National planning firm. Entitlement and infrastructure projects in SC need BZA context.,https://www.irpt.net/irpt-professional-services-directory-firms-engineering-design-consulting-providers/
+61,WSP,tom.fuhrhop@wsp.com,Planning engineering,Global planner/engineer. Local official data supports Southeast land and transportation work.,https://www.irpt.net/irpt-professional-services-directory-firms-engineering-design-consulting-providers/
+62,Bowman Consulting,ir@bowman.com,Planning engineering,Land-development engineers expanding in the Southeast. BZA rosters speed client briefings.,https://investors.bowman.com/resources/investor-contacts
+63,Mungo Homes,media@mungo.com,SC homebuilder,Large SC homebuilder. County BZA makeup affects lot yield, variances, and community approvals.,https://www.mungo.com/contact-us
+64,D.R. Horton,MediaRelations@drhorton.com,Homebuilder,Largest US builder with heavy SC volume. Entitlement teams want sitting vs historical board data.,https://investor.drhorton.com/resources/faqs/faq-title-contact-info/faq-9
+65,Lennar,Danielle.Tocco@lennar.com,Homebuilder,National builder active in SC metros. Variance-board turnover is an entitlement risk signal.,https://newsroom.lennar.com/media-contact
+66,PulteGroup,alexandra.boyle@pultegroup.com,Homebuilder,National builder in Carolinas. Uses local-approval intelligence when opening communities.,https://pultegroupinc.com/contact/investor-contact-pr-contacts/default.aspx
+67,Greystar,charlotteservice@greystar.com,Multifamily developer,Charleston-headquartered multifamily giant. SC county BZA names matter for new communities.,https://www.linkedin.com/company/greystar
+68,Crescent Communities,info@crescentcommunities.com,Developer,Carolinas mixed-use developer. Entitlements routinely go through county planning and BZA.,https://www.crescentcommunities.com/privacy-policy
+69,EDENS,media@edens.com,Retail developer,Columbia-born retail developer. Tenant uses often need special exceptions or variances.,https://edens.com/contact/
+70,RealtyLink,marketing@realtylinkdev.com,SC developer,Upstate SC industrial and commercial developer. County BZA is a regular approval path.,https://realtylinkdev.com/realtylink-sells-milestone-shopping-center-development/
+71,The Beach Company,brewerton@thebeachcompany.com,SC developer,Charleston coastal developer. Lowcountry BZA composition is core local intelligence.,https://thebeachcompany.com/wp-content/uploads/2023/03/TheBeachCo_MediaKit.pdf
+72,Childress Klein,charlotte@childressklein.com,Developer,Carolinas commercial developer. SC and NC county boards affect industrial and office sites.,https://www.childressklein.com/privacy-policy
+73,Quest Site Solutions,info@questsitesolutions.com,Site selection,Successor to McCallum Sweeney in Greenville. Site selectors brief clients on local approval bodies.,https://questsitesolutions.com/about/
+74,NAI Earle Furman,marketing@naiearlefurman.com,CRE brokerage,Upstate SC brokerage. Brokers use board names when advising industrial and land buyers.,https://www.naiearlefurman.com/wp-content/uploads/sites/68/NAI-Earle-Furman-Welcomes-Four-New-Hires-11.14.2023.pdf
+75,CBRE,mediarelations@cbre.com,CRE brokerage,Global brokerage with Carolinas offices. Land and industrial teams sell entitlement context.,https://www.cbre.com/about-us/culture-and-history/contact-us
+76,JLL,JLLInvestorRelations@jll.com,CRE brokerage,Global brokerage. Site selection and industrial practices buy local civic data.,https://ir.jll.com/news-releases/default.aspx
+77,Colliers,Bryan.Welch@colliers.com,CRE brokerage,Carolinas brokerage leadership contact. Local BZA knowledge is a pitch differentiator.,https://www.colliers.com/en/experts/bryan-welch
+78,Cushman & Wakefield,ir@cushwake.com,CRE brokerage,Global brokerage. Occupier and investor clients ask who can grant a variance.,https://ir.cushmanwakefield.com/news/default.aspx
+79,Stewart Title,mediarelations@stewart.com,Title insurance,Title and underwriting. Appeals-board identity is a residual land-use risk signal.,https://www.stewart.com/en/contact-us
+80,Fidelity National Financial,Investors@fnf.com,Title insurance,Largest title family including Chicago Title. Civic official data can feed diligence products.,https://www.investor.fnf.com/ir-resources/investor-faqs
+81,Investors Title,corporate@invtitle.com,Title insurance,Carolinas title company. SC county board data supports commercial closing diligence.,https://www.invtitle.com/locations
+82,Old Republic Title,corporatelegal@oldrepublictitle.com,Title insurance,National title underwriter. Local land-use decision-makers inform risk manuals.,https://www.oldrepublictitle.com/contact/
+83,Yardi Systems,jason.spencer@yardi.com,PropTech,Property-management platform. Development and compliance modules benefit from local-board data.,https://www.carh.org/software-services/
+84,RealPage,katherine.thomas@realpage.com,PropTech,Multifamily software. New-development teams care about county approval bodies.,https://www.carh.org/software-services/
+85,STR,info@str.com,CRE data,CoStar hotel-data unit. Hospitality site work in Horry and Charleston hits county BZAs.,https://www.costar.com/contact
+86,ALN Apartment Data,patrick@alndata.com,CRE data,Multifamily research. SC pipeline reports get better with entitlement-board context.,https://legacy.alndata.com/contact/
+87,Moody's CRE,CRESupport@moodys.com,CRE analytics,Commercial real estate analytics. Local approval-body data is a development-risk feature.,https://www.moodys.com
+88,Upstate SC Alliance,development@upstatealliance.com,Economic development,Recruits industry to Greenville/Spartanburg/Anderson. Prospects ask how local boards work.,https://www.facebook.com/UpstateSCAlliance/
+89,Charleston Regional Development Alliance,alliance@crda.org,Economic development,Charleston-region site selectors. BZA composition is part of the local-process brief.,https://crda.org/about-us/how-we-help/
+90,Central SC Alliance,csca@centralsc.org,Economic development,Columbia/Midlands EDC. County zoning appeals matter for industrial prospects.,https://www.centralsc.org/privacy-policy
+91,Myrtle Beach Regional EDC,info@mbredc.org,Economic development,Horry County recruitment. Tourism and industrial projects often need BZA action.,https://www.mbredc.org/about/contact-us/
+92,South Carolina Department of Commerce,info@sccommerce.com,Economic development,State site-selection partner. A 32-county BZA directory is a ready research tool for prospects.,https://www.sccommerce.com/fr/contact
+93,Hines,pressoffice@hines.com,National developer,Global developer with Southeast projects. Entitlement teams buy local decision-maker intelligence.,https://www.hines.com/contact
+94,Avison Young,sandra.hill@avisonyoung.com,CRE brokerage,National brokerage with Carolinas coverage. Media/BD door for a local civic-data license pitch.,https://www.avisonyoung.us/w/sandra-hill
+95,Home Builders Association of South Carolina,info@hbaofsc.com,SC trade group,Represents SC builders who regularly need variances. Natural reseller or member-data buyer.,https://www.association-insight.com/insight/Home_Builders_Association_of_South_Carolina-F43G52C40F33F36A44A44A07-CCEAJBHCABFCAC-Organization-Keystaff
+96,Urban Land Institute,media@uli.org,Industry association,ULI members are developers and investors. A SC BZA directory is a research product they can circulate.,https://uli.org/about-uli/uli-contact-us/
+97,National Association of Home Builders,ethompson@nahb.org,Industry association,National builder lobby. State and local approval-body data supports housing-supply advocacy.,https://www.nahb.org
+98,Great Southern Homes,info@greatsouthernhomes.com,SC homebuilder,One of the largest SC builders. County BZA makeup affects community entitlements statewide.,https://www.greatsouthernhomes.com
+99,LegiStorm,press@legistorm.com,Officials data,Sells verified government-official databases. County BZA members are a local-official expansion set.,https://www.legistorm.com/index/media_kit.html
+100,American Planning Association,customerservice@planning.org,Planning association,Professional home of planners who advise BZAs. Directory is a research and member-intel product.,https://ncac.planning.org/membership/join-apa/
