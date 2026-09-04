@@ -550,9 +550,16 @@ def _is_person(name):
             "meeting", "session", "download", "agenda", "minutes", "workshop",
             "cancellation", "orientation", "subcommittee", "work session",
             "tax advisory", "sales tax", "video for",
+            "voted that", "motion was", "consideration of", "joint water",
+            "housing study", "would serve", "seconded by",
         )
     ):
         return False
+    # Reject merged multi-person blobs ("Mike Watson Christopher Pullen").
+    if len(alpha) >= 4 and not re.search(r"(?i)\b(jr|sr|ii|iii|iv)\b", name):
+        # Allow 4-token names with middle initials only.
+        if not any(len(t) == 1 for t in tokens):
+            return False
     alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
     if len(alpha) < 2:
         return False
@@ -1951,6 +1958,35 @@ def parse_minutes_attendance(text):
     return out
 
 
+def _parse_board_members_list(text, county):
+    """Agenda header roster: 'Board Members:\\nMr. A\\nMs. B, Chair'."""
+    out = []
+    m = re.search(
+        r"(?is)\bboard members?\s*:?\s*\n(.*?)(?=\n\s*\d+\.\s|\n\s*call to order|"
+        r"\n\s*approval of|\n\s*agenda\b|\Z)",
+        text,
+    )
+    if not m:
+        return out
+    for raw in m.group(1).splitlines():
+        line = raw.strip()
+        if not line or re.search(r"(?i)^(staff|also present|members?\s+present)", line):
+            continue
+        line = re.sub(r"(?i)^(?:(?:Mr|Ms|Mrs|Dr|Miss|Rev)\.?\s+)+", "", line)
+        line = re.sub(
+            r"(?i)\s*,?\s*(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|"
+            r"Chairperson|Chair|Secretary)\s*$",
+            "",
+            line,
+        )
+        name = _clean_name(line) or (
+            _title_case_name(line) if _is_person(_title_case_name(line)) else None
+        )
+        if name and _is_person(name):
+            out.append(_member(county, name, "sitting", None, None, raw.strip()[:200]))
+    return out
+
+
 def parse_roster_from_text(text, county):
     """Apply text-roster parsers to plain document text (HTML-stripped or PDF)."""
     if not text:
@@ -1960,11 +1996,13 @@ def parse_roster_from_text(text, county):
     members = []
     members.extend(_parse_numbered_membership_roster(text, county))
     members.extend(_parse_bza_members_lines(text, county))
+    members.extend(_parse_board_members_list(text, county))
     text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
     members.extend(_parse_bza_members_lines(text, county))
+    members.extend(_parse_board_members_list(text, county))
     # Agenda header: "Chairman – Shasai S. Hendrix"
     for m in re.finditer(
         r"(?i)\b(?:chairman|vice[-\s]?chairman|chairperson)\s*[–—:-]\s*"

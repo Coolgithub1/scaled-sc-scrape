@@ -68,8 +68,12 @@ KNOWN_BOZA_URLS = {
         "https://edgefieldcounty.sc.gov/building-permits-applications-and-fees",
     ],
     "Fairfield": [
-        # Boards/commissions index is too noisy (every work session title).
-        # Prefer planning/zoning if published; otherwise discovery only.
+        "https://www.fairfieldsc.com/departments/planning_and_zoning/",
+        "https://www.fairfieldsc.com/uploads/uploads/BZA_Agenda_January_20%2C_2026.pdf",
+        "https://www.fairfieldsc.com/uploads/uploads/BZA_Meeting_Minutes_9-15-25.pdf",
+        "https://www.fairfieldsc.com/uploads/uploads/BZA_Meeting_Minutes_8-18-25.pdf",
+        "https://www.fairfieldsc.com/uploads/uploads/BZA_Meeting_Minutes_6-16-25.pdf",
+        "https://www.fairfieldsc.com/uploads/uploads/BZA_Meeting_Minutes_4-21-25.pdf",
     ],
     "Florence": [
         "https://www.florenceco.org/planning/bza/members.php",
