@@ -36,6 +36,9 @@ KNOWN_BOZA_URLS = {
     "Charleston": [
         "https://www.charlestoncounty.gov/departments/zoning-planning/bza.php",
         "https://www.charlestoncounty.org/departments/zoning-planning/bza.php",
+        # Meeting summaries host Members Present when no separate roster page exists.
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-MEETING.pdf",
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-ANNUAL-BUSINESS-MEETING.pdf",
     ],
     "Cherokee": [
         "https://cherokeecountysc.gov/building-safety/planning-commission/",

@@ -1088,7 +1088,9 @@ def _is_minutes_document(url, link_text="", content=None):
             r"|were\s+present"
             r"|were\s+absent"
             r"|board members?\s*[–—:-].{0,200}?\bpresent\b"
-            r"|minutes of the meeting",
+            r"|minutes of the meeting"
+            r"|members?\s+present"
+            r"|summary of .{0,40}meeting",
             content[:3500],
         ):
             return False
@@ -1096,7 +1098,7 @@ def _is_minutes_document(url, link_text="", content=None):
         # and application markers are absent.
         if not blob.strip():
             return True
-    return "minute" in blob or "agenda" in blob or "viewfile" in blob
+    return "minute" in blob or "agenda" in blob or "viewfile" in blob or "summary" in blob
 
 
 def _content_is_minutes(content):
