@@ -2403,8 +2403,13 @@ def augment_and_dedupe(all_members):
                     member["gender"] = raw_gender
             # Final status normalization from evidence (roster / term years).
             end = _year_value(member.get("term_end"))
-            # Expired terms win over the roster flag (former-member pages).
-            if end is not None and end < CURRENT_YEAR:
+            # Expired terms win over the roster flag (former-member pages),
+            # except last-year attendance still counts as the current board.
+            if end is not None and end < CURRENT_YEAR - 1:
+                member["status"] = "historical"
+            elif end is not None and end == CURRENT_YEAR - 1 and member.get("_from_attendance"):
+                member["status"] = "sitting"
+            elif end is not None and end < CURRENT_YEAR and not member.get("_from_attendance"):
                 member["status"] = "historical"
             elif member.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
                 member["status"] = "sitting"
