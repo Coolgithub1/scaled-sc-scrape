@@ -6,6 +6,10 @@ That file is **board members**, not parcels or cases: 264 people, 32 of 46 count
 
 `sc_bza_buyer_list.csv` has 100 unique companies and one public business email each. Rank is fit, not a guarantee they will buy.
 
-Emails are published contact, sales, media, or marketing addresses. They are first doors for a license pitch, not scraped personal inboxes. Some national firms only publish media/IR addresses.
+Emails are published company, office, sales, or local operating contacts. Press, media, and IR addresses were researched and replaced where a real company inbox exists.
+
+For leftover ranks 61–100:
+- `send_ok=yes` means a published company or local-ops inbox (not press/IR)
+- `send_ok=no` means the firm only publishes press/IR or a web form. Do not email those.
 
 Do not send mail from this list unless asked.
