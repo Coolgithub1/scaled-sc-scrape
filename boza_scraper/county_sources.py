@@ -91,6 +91,7 @@ KNOWN_BOZA_URLS = {
         "https://www.horrycountysc.gov/departments/planning-and-zoning/board-of-zoning-appeals/",
     ],
     "Jasper": [
+        "https://www.jaspercountysc.gov/government/boards-and-commissions/board-of-zoning-appeals/",
         "https://www.jaspercountysc.gov/government/boards-and-commissions/",
     ],
     "Kershaw": [

@@ -7,6 +7,7 @@ import io
 import json
 import os
 import re
+import threading
 from datetime import datetime
 from urllib.parse import urljoin, urlparse
 
@@ -48,7 +49,10 @@ _playwright = None
 _browser = None
 _browser_lock = asyncio.Lock()
 _RENDER_SEM = asyncio.Semaphore(3)
-_OCR_SEM = asyncio.Semaphore(1)  # tesseract is CPU-heavy; never pile up
+_OCR_SEM = asyncio.Semaphore(1)  # asyncio gate for OCR jobs
+# Thread lock survives wait_for cancellation — asyncio.Semaphore alone can
+# release while a cancelled to_thread still runs tesseract, which then piles up.
+_OCR_THREAD_LOCK = threading.Lock()
 _OCR_MAX_PAGES = 2
 _OCR_DPI = 150
 _OCR_MAX_BYTES = 4_000_000  # skip giant scanned packets
@@ -1414,6 +1418,8 @@ async def fetch_document(url):
             and len(data) <= _OCR_MAX_BYTES
         ):
             try:
+                # Hold the asyncio gate for the whole attempt. The thread lock
+                # inside _ocr_pdf_bytes prevents pile-ups if wait_for cancels.
                 async with _OCR_SEM:
                     ocr_text = await asyncio.wait_for(
                         asyncio.to_thread(_ocr_pdf_bytes, data),
@@ -1421,6 +1427,8 @@ async def fetch_document(url):
                     )
                 if ocr_text and len(ocr_text.strip()) > len((text or "").strip()):
                     text = ocr_text
+            except asyncio.TimeoutError:
+                pass
             except Exception:
                 pass
         return text
@@ -1434,24 +1442,31 @@ async def fetch_document(url):
 def _ocr_pdf_bytes(data, max_pages=None):
     """OCR a PDF via pdf2image + tesseract. Returns '' on failure."""
     max_pages = max_pages or _OCR_MAX_PAGES
-    try:
-        import pytesseract
-        from pdf2image import convert_from_bytes
-    except Exception:
+    # Non-blocking try: if another cancelled OCR thread still holds the lock,
+    # skip rather than queue more CPU work behind a dead wait_for.
+    if not _OCR_THREAD_LOCK.acquire(blocking=False):
         return ""
     try:
-        images = convert_from_bytes(
-            data, first_page=1, last_page=max_pages, dpi=_OCR_DPI
-        )
-    except Exception:
-        return ""
-    parts = []
-    for img in images:
         try:
-            parts.append(pytesseract.image_to_string(img) or "")
+            import pytesseract
+            from pdf2image import convert_from_bytes
         except Exception:
-            continue
-    return "\n".join(parts)
+            return ""
+        try:
+            images = convert_from_bytes(
+                data, first_page=1, last_page=max_pages, dpi=_OCR_DPI
+            )
+        except Exception:
+            return ""
+        parts = []
+        for img in images:
+            try:
+                parts.append(pytesseract.image_to_string(img) or "")
+            except Exception:
+                continue
+        return "\n".join(parts)
+    finally:
+        _OCR_THREAD_LOCK.release()
 
 
 # ---------------------------------------------------------------------------
