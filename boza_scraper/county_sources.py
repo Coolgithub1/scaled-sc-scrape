@@ -46,6 +46,7 @@ KNOWN_BOZA_URLS = {
         "https://cherokeecountysc.gov/building-safety/planning-commission/",
     ],
     "Chester": [
+        "https://www.chestercountysc.gov/boards/building-and-zoning/zoning-board-of-appeals/",
         "https://www.chestercountysc.gov/boards/zoning",
     ],
     "Chesterfield": [
@@ -166,6 +167,8 @@ KNOWN_BOZA_URLS = {
         "https://www.co.pickens.sc.us/departments/planning/board_of_appeals_agendas___minutes/index.php",
         "https://www.co.pickens.sc.us/departments/planning/index.php",
         "https://cms5.revize.com/revize/pickenscountysc/document_center/Agendas%20&%20Minutes/Board%20of%20Appeals/2022/AGENDA%2004-25-2022.pdf",
+        # May 4, 2026 minutes (scanned) list Members Present; live PDF often 404 from datacenters.
+        "https://www.co.pickens.sc.us/departments/planning/board_of_appeals_agendas___minutes/May%204%20Minutes%20-%20Signed.pdf",
     ],
     "Richland": [
         "https://www.richlandcountysc.gov/Government/Get-Involved/Boards-and-Committees/Board-of-Zoning-Appeals",

@@ -935,11 +935,20 @@ def _parse_current_members_block(text, county):
 def _parse_district_roster_text(text, county):
     """Chester/Calhoun-style: District N \\n Name \\n Appointment Ends: MM-YYYY."""
     out = []
-    # Prefer the Board of Zoning Appeals section when Planning Commission also listed.
-    bza = re.search(
-        r"(?is)board of zoning appeals\b(.*?)(?:\bordiances\b|\bagendas?\b\s*\+|\bpurpose\b|\bmembership criteria\b|$)",
+    # Prefer the Board of Zoning Appeals section that actually contains district
+    # rows. Early nav text like "Agendas + Minutes" must not truncate the roster.
+    bza = None
+    for m in re.finditer(
+        r"(?is)(?:board of zoning appeals|zoning board of appeals)\b(.*?)(?="
+        r"\bordiances\b|\bmembership criteria\b|\bconstruction board of appeals\b|"
+        r"\bpurpose\b|$)",
         text,
-    )
+    ):
+        if re.search(r"(?im)^(?:district\s*\d+|at\s*large)\s*$", m.group(1)):
+            bza = m
+            break
+        if bza is None:
+            bza = m
     scope = bza.group(1) if bza else text
     # Strip a leading "Zoning District" column header.
     scope = re.sub(r"(?im)^\s*zoning\s+district\s*$", "", scope)
@@ -983,6 +992,46 @@ def _parse_district_roster_text(text, county):
             name = _clean_name(raw) or _title_case_name(raw)
             if name and _is_person(name):
                 out.append(_member(county, name, "sitting", None, None, m.group(0)[:200]))
+    return out
+
+
+def _parse_contacts_people_roster(soup, county):
+    """Chester-style contacts-people-list: h4 District / h5 Name / Appointment Ends."""
+    out = []
+    lists = soup.select("ul.contacts-people-list")
+    if not lists:
+        return out
+    page_text = soup.get_text(" ", strip=True)
+    if not re.search(r"(?i)board of zoning appeals|zoning board of appeals", page_text):
+        return out
+    for lst in lists:
+        for li in lst.find_all("li", recursive=False):
+            blob = li.get_text("\n", strip=True)
+            h5 = li.find("h5")
+            raw_name = h5.get_text(" ", strip=True) if h5 else ""
+            if not raw_name or re.search(r"(?i)^\s*vacant\s*$", raw_name):
+                continue
+            name = _clean_name(raw_name) or (
+                _title_case_name(raw_name) if _is_person(_title_case_name(raw_name)) else None
+            )
+            if not name or not _is_person(name):
+                continue
+            # Require appointment/term cues so nav widgets aren't treated as seats.
+            if not re.search(r"(?i)appointment|term\s*expires?", blob):
+                continue
+            years = _years_from_dates(blob)
+            end_m = re.search(
+                r"(?i)(?:appointment\s*ends|term\s*expires?)\s*:?\s*.*?\b((?:19|20)\d{2})\b",
+                blob,
+            )
+            term_end = end_m.group(1) if end_m else (str(max(years)) if years else None)
+            start_m = re.search(
+                r"(?i)(?<!re)appointment\s*:?\s*.*?\b((?:19|20)\d{2})\b", blob
+            )
+            term_start = start_m.group(1) if start_m else None
+            out.append(
+                _member(county, name, _status_for(term_end), term_start, term_end, blob[:200])
+            )
     return out
 
 
@@ -1123,12 +1172,16 @@ def _parse_bza_members_lines(text, county):
     m = re.search(
         r"(?is)(?:board of zoning appeals|zoning board of appeals)\s+members?\b"
         r"(.*?)(?=\n(?:contact us|privacy policy|planning commission|board of architectural|"
-        r"county council)\b|$)",
+        r"county council|agendas?\s*\+|business\s*\+|on this page|purpose|membership criteria|"
+        r"government|departments)\b|$)",
         text,
     )
     if not m:
         return out
     block = m.group(1)
+    # Nav/TOC blocks are not rosters.
+    if re.search(r"(?i)agendas?\s*\+|business\s*\+|forms?\s+directory|gis mapping", block):
+        return out
     skip = re.compile(
         r"(?i)^(appointed by|member|term|term of office|authority|membership|"
         r"responsibilities|meeting schedule|staff liaison|agendas?\s+and\s+minutes|"
@@ -1142,6 +1195,8 @@ def _parse_bza_members_lines(text, county):
             continue
         if ":" in line and len(line.split()) <= 6:
             # "Term of Office : 3 years" style metadata
+            continue
+        if "+" in line or re.search(r"(?i)\b(directory|mapping|careers|resources|bids)\b", line):
             continue
         cleaned = re.sub(r"\s*\([^)]*(?:chair|vice)[^)]*\)\s*", " ", line, flags=re.I)
         cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t-–—,:;")
@@ -1251,6 +1306,8 @@ def parse_current_members(html, county):
 
     # 1b. Card-title rosters (Anderson County).
     members.extend(_parse_card_title_roster(soup, county))
+    # 1c. Contacts-people lists (Chester County).
+    members.extend(_parse_contacts_people_roster(soup, county))
 
     full_text = soup.get_text("\n", strip=True)
     text = _bza_scoped_text(full_text)
