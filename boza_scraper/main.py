@@ -1620,8 +1620,12 @@ def _parse_attendance_names(section):
                 "planning", "minutes", "agenda", "staff",
                 "hardship", "variance", "applicant", "owner",
                 "information", "signature", "property",
+                "vacancy", "vacant", "none",
             )
         ):
+            continue
+        # Reject names that still carry vacancy/placeholder tokens.
+        if re.search(r"(?i)\b(vacancy|vacant|none|\d+)\b", part):
             continue
         names.append(part)
     # Unique, preserve order.
@@ -2314,13 +2318,17 @@ def _merge_members(base, other):
         merged["tenure"] = f"{b_ten} | {o_ten}"
 
     # Status from evidence, not LLM vibes:
-    # roster row or still current (term_end >= this year) => sitting; else historical.
+    # roster row or still current (term_end >= this year, or last year for
+    # attendance-sourced rows) => sitting; else historical.
     end = _year_value(merged.get("term_end"))
+    from_attendance = merged.get("_from_attendance") or other.get("_from_attendance") or base.get("_from_attendance")
     if merged.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
         if end is not None and end < CURRENT_YEAR:
             merged["status"] = "historical"
         else:
             merged["status"] = "sitting"
+    elif from_attendance and end is not None and end >= CURRENT_YEAR - 1:
+        merged["status"] = "sitting"
     elif end is not None and end < CURRENT_YEAR:
         merged["status"] = "historical"
     else:
