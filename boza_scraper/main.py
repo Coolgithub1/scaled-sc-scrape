@@ -1554,22 +1554,31 @@ def _parse_attendance_names(section):
         section,
     )
     role_words = {
-        "chairman", "chair", "vice", "secretary", "vicechairman",
-        "vicechair", "vice-chair", "vice-chairman", "commissioner", "member",
-        "none",
+        "chairman", "chairwoman", "chairperson", "chair", "vice", "secretary",
+        "vicechairman", "vicechairwoman", "vicechair", "vice-chair",
+        "vice-chairman", "vice-chairwoman", "commissioner", "member", "none",
+        "mr", "ms", "mrs", "dr", "miss", "rev",
     }
     # Split first, then strip roles — never let role regex eat comma delimiters.
-    parts = re.split(r"\s*,\s*|\s+and\s+", section)
+    parts = re.split(r"\s*[,;]\s*|\s+and\s+", section, flags=re.I)
     for part in parts:
         part = _fix_ocr_name_gaps(part)
+        part = part.strip()
+        part = re.sub(r"(?i)^(and|or)\s+", "", part)
         part = re.sub(
-            r"(?i)^(?:Vice[-\s]?Chair(?:man)?|Chairman|Chairperson|Chair|"
+            r"(?i)^(?:(?:Mr|Ms|Mrs|Dr|Miss|Rev)\.?\s+)*"
+            r"(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|Chairperson|Chair|"
             r"Secretary|Commissioner|Member)\s+",
             "",
             part,
         )
         part = re.sub(
-            r"(?i)\s+(?:Vice[-\s]?Chair(?:man)?|Chairman|Chairperson|Chair|"
+            r"(?i)^(?:(?:Mr|Ms|Mrs|Dr|Miss|Rev)\.?\s+)+",
+            "",
+            part,
+        )
+        part = re.sub(
+            r"(?i)\s*(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|Chairperson|Chair|"
             r"Secretary|Commissioner|Member)\s*$",
             "",
             part,
