@@ -94,6 +94,8 @@ KNOWN_BOZA_URLS = {
     "Georgetown": [
         "https://www.gtcountysc.gov/AgendaCenter",
         "https://www.gtcountysc.gov/177/Planning",
+        # MatchBoard sitting ZBA members (entity 22 / board 383).
+        "https://api.matchboard.tech/app/boards/383",
     ],
     "Greenville": [
         "https://www.greenvillecounty.org/apps/countycouncilboard/BoardDetails.aspx?id=76",
@@ -155,6 +157,10 @@ KNOWN_BOZA_URLS = {
     ],
     "Oconee": [
         "https://oconeesc.com/council-home/committees-and-commissions/boards-and-commissions/board-of-zoning-appeals",
+    ],
+    "Orangeburg": [
+        # MatchBoard sitting ZBA members (entity 38 / board 139).
+        "https://api.matchboard.tech/app/boards/139",
     ],
     "Pickens": [
         "https://www.co.pickens.sc.us/departments/planning/board_of_appeals_agendas___minutes/index.php",

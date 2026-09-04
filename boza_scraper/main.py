@@ -706,6 +706,7 @@ def _extract_name(text):
 
 def _clean_name(raw):
     """Extract a person name from a roster cell that may include an address/phone."""
+    raw = re.sub(r"(?i)^(mr|ms|mrs|miss|dr|rev)\.?\s+", "", raw.strip())
     raw = re.sub(r"District\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"At[-\s]?Large", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"Seat\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
@@ -1152,6 +1153,87 @@ def _parse_bza_members_lines(text, county):
     return out
 
 
+def _parse_members_colon_block(text, county):
+    """Jasper-style: 'Members:' then one 'Name (Role)' / 'Name, Secretary' per line."""
+    out = []
+    # Prefer a Members: block that sits under a BZA heading.
+    m = re.search(
+        r"(?is)(?:board of zoning appeals|zoning board of appeals|board of appeals)\b"
+        r".{0,1200}?members?\s*:\s*\n(.*?)(?=\n\s*(?:board of|agendas?|minutes?|e-?packet|"
+        r"section menu|contact|home\b|government\b)|$)",
+        text,
+    )
+    if not m:
+        m = re.search(
+            r"(?im)^members?\s*:\s*\n(.*?)(?=\n\s*(?:board of|agendas?|minutes?|e-?packet|"
+            r"section menu|contact)|$)",
+            text,
+        )
+    if not m:
+        return out
+    block = m.group(1)
+    for raw in block.splitlines():
+        line = raw.strip().strip("\u200b").strip(" \t-–—•*")
+        if not line or re.search(r"(?i)^\s*vacant\s*$", line):
+            continue
+        # Staff secretary lines are not voting board members.
+        if re.search(r"(?i),\s*secretary\s*$", line) or re.search(
+            r"(?i)^\s*.+\s+secretary\s*$", line
+        ):
+            if not re.search(r"(?i)\b(chair|vice)\b", line):
+                continue
+        cleaned = re.sub(r"\s*\([^)]*(?:chair|vice)[^)]*\)\s*", " ", line, flags=re.I)
+        cleaned = re.sub(r"(?i)^(mr|ms|mrs|miss|dr|rev)\.?\s+", "", cleaned).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t-–—,:;")
+        name = _clean_name(cleaned) or (
+            _title_case_name(cleaned) if _is_person(_title_case_name(cleaned)) else None
+        )
+        if name and _is_person(name):
+            out.append(_member(county, name, "sitting", None, None, line[:200]))
+    return out
+
+
+def _parse_card_title_roster(soup, county):
+    """Anderson-style Bootstrap cards: h4.card-title name + District N body text."""
+    out = []
+    cards = soup.select("h4.card-title, .card-title")
+    if not cards:
+        return out
+    # Require BZA context somewhere on the page so we don't scoop council cards.
+    page_text = soup.get_text(" ", strip=True)
+    if not re.search(r"(?i)board of zoning appeals|zoning board of appeals", page_text):
+        return out
+    for title in cards:
+        raw = title.get_text(" ", strip=True)
+        if not raw or re.search(r"(?i)^\s*vacant\s*$", raw):
+            continue
+        # Skip non-person card titles (section headers).
+        if re.search(
+            r"(?i)board of zoning|application|packet|hearing|schedule|contact|ordinance",
+            raw,
+        ):
+            continue
+        cleaned = re.sub(r"(?i)^(mr|ms|mrs|miss|dr|rev)\.?\s+", "", raw).strip()
+        name = _clean_name(cleaned) or (
+            _title_case_name(cleaned) if _is_person(_title_case_name(cleaned)) else None
+        )
+        if not name or not _is_person(name):
+            continue
+        body = ""
+        parent = title.find_parent(class_=re.compile(r"card"))
+        if parent:
+            body = parent.get_text(" ", strip=True)
+        # Prefer cards that look like board seats (district / chair / vice).
+        if body and not re.search(
+            r"(?i)district|chair|vice|member|at-?large", body
+        ):
+            # Still accept if the card title itself is clearly a person and
+            # neighboring cards carry district labels (Anderson pattern).
+            pass
+        out.append(_member(county, name, "sitting", None, None, (body or raw)[:200]))
+    return out
+
+
 def parse_current_members(html, county):
     members = []
     if not html:
@@ -1167,6 +1249,9 @@ def parse_current_members(html, county):
     for table in soup.find_all("table"):
         members.extend(_parse_table(table, county))
 
+    # 1b. Card-title rosters (Anderson County).
+    members.extend(_parse_card_title_roster(soup, county))
+
     full_text = soup.get_text("\n", strip=True)
     text = _bza_scoped_text(full_text)
 
@@ -1177,6 +1262,8 @@ def parse_current_members(html, county):
     members.extend(_parse_numbered_membership_roster(text, county))
     members.extend(_parse_bza_members_lines(full_text, county))
     members.extend(_parse_bza_members_lines(text, county))
+    members.extend(_parse_members_colon_block(full_text, county))
+    members.extend(_parse_members_colon_block(text, county))
 
     # 3. Plan heuristic: list items with a name and a Term/Appointed/Expires cue.
     for lst in soup.find_all(["ul", "ol"]):
@@ -2092,10 +2179,13 @@ async def fetch_matchboard_members(county):
                 gender = "female"
             else:
                 gender = None
+            # Trust MatchBoard's active flag over calendar year — holdover
+            # appointees stay listed as active after term_expiration.
+            status = "sitting" if p.get("active", 1) else _status_for(term_end)
             row = _member(
                 county,
                 name,
-                _status_for(term_end),
+                status,
                 None,
                 term_end,
                 f"MatchBoard {board.get('name') or 'ZBA'}; term_expiration={exp}"[:200],
