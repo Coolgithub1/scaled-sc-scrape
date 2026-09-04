@@ -53,12 +53,17 @@ KNOWN_BOZA_URLS = {
     ],
     "Clarendon": [
         "https://www.clarendoncountysc.gov/business-and-development/planning-and-zoning/",
+        # MatchBoard hosts sitting ZBA members (entity 14 / board 363).
+        "https://api.matchboard.tech/app/boards/363",
     ],
     "Darlington": [
         "https://www.darcosc.com/government/boards_commissions/index.php",
+        # MatchBoard sitting BZA members (entity 101 / board 351).
+        "https://api.matchboard.tech/app/boards/351",
     ],
     "Dillon": [
         "https://dilloncountysc.org/departments/services/building_code_enforcement_planning_zoning.php",
+        "https://dilloncountysc.org/leadership/boards_commissions.php",
     ],
     "Dorchester": [
         # Live host is Akamai-blocked from many datacenter IPs; Wayback works.
@@ -116,6 +121,7 @@ KNOWN_BOZA_URLS = {
         "https://www.kershaw.sc.gov/government/departments-h-q/planning-zoning/board-of-zoning-appeals-planning-commission",
         # March 2025 agenda packet embeds May 2024 minutes with Members Present.
         "https://web.archive.org/web/20250607205224if_/https://www.kershaw.sc.gov/home/showpublisheddocument/16352/638757334123430000",
+        "https://api.matchboard.tech/app/boards/318",
     ],
     "Lancaster": [
         "https://www.lancastercountysc.gov/447/Board-of-Zoning-Appeals",
@@ -139,6 +145,8 @@ KNOWN_BOZA_URLS = {
     "McCormick": [
         "https://www.mccormickcountysc.org/how_do_i/boards-commissions.php",
         "https://www.mccormickcountysc.org/government/agendas___minutes.php",
+        # Scanned multi-board contact sheet; ZBA section OCRs to named members.
+        "https://cms5.revize.com/revize/mccormickcountysc/Document_Center/Government/2025%20Board%20%26%20Commissions.pdf",
         "https://cms5.revize.com/revize/mccormickcountysc/Agenda%20&%20Minutes/Board%20of%20Zoning%20Appeals/BZA%20agenda%20Nov.%2013.pdf",
         "https://cms5.revize.com/revize/mccormickcountysc/Agenda%20&%20Minutes/Zoning/4-23-26.pdf",
     ],
@@ -164,6 +172,7 @@ KNOWN_BOZA_URLS = {
     ],
     "Union": [
         "https://gearupunionsc.com/departments/building-maintenance/",
+        "https://gearupunionsc.com/boards-commissions/",
     ],
     "Williamsburg": [
         "https://www.williamsburgcounty.sc.gov/AgendaCenter",
@@ -173,4 +182,17 @@ KNOWN_BOZA_URLS = {
         "https://boardsandcommissions.yorkcountygov.com/Board.aspx?ID=42",
         "https://www.yorkcountysc.gov/AgendaCenter",
     ],
+}
+
+# MatchBoard entity IDs for SC counties that publish sitting board members.
+MATCHBOARD_ENTITY_IDS = {
+    "Beaufort": 7,
+    "Calhoun": 9,
+    "Clarendon": 14,
+    "Colleton": 15,
+    "Darlington": 101,
+    "Georgetown": 22,
+    "Greenwood": 24,
+    "Kershaw": 28,
+    "Orangeburg": 38,
 }

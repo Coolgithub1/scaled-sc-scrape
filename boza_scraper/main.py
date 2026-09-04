@@ -37,7 +37,7 @@ from config import (
 )
 from counties import COUNTIES
 from cache import cache
-from county_sources import KNOWN_BOZA_URLS
+from county_sources import KNOWN_BOZA_URLS, MATCHBOARD_ENTITY_IDS
 
 CURRENT_YEAR = datetime.now().year
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -1874,6 +1874,67 @@ async def fetch_document(url):
         return None
 
 
+def _ocr_zba_sections_from_image(img, pytesseract):
+    """Crop and OCR ZONING BOARD OF APPEALS bands (colored headers often miss full-page OCR)."""
+    try:
+        from PIL import ImageOps, ImageEnhance
+        # Scanned contact sheets use light colored headers; boost contrast first.
+        work = ImageOps.grayscale(img)
+        work = ImageEnhance.Contrast(work).enhance(2.0)
+        data = pytesseract.image_to_data(work, output_type=pytesseract.Output.DICT)
+    except Exception:
+        try:
+            data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+            work = img
+        except Exception:
+            return ""
+    words = []
+    for i, raw in enumerate(data.get("text") or []):
+        t = (raw or "").strip()
+        if not t:
+            continue
+        words.append(
+            {
+                "text": t,
+                "top": data["top"][i],
+                "height": data["height"][i],
+            }
+        )
+    header_ys = []
+    for i, w in enumerate(words):
+        low = w["text"].lower().strip(".:")
+        if low not in {"zoning", "zba", "board", "appeals", "appeal"}:
+            continue
+        nearby = " ".join(x["text"].lower() for x in words[max(0, i - 3) : i + 5])
+        if ("zoning" in nearby and "appeal" in nearby) or low == "zba":
+            header_ys.append(w["top"])
+    if not header_ys:
+        return ""
+    # Deduplicate nearby detections of the same header.
+    header_ys = sorted(set(header_ys))
+    merged = []
+    for y in header_ys:
+        if not merged or y - merged[-1] > 80:
+            merged.append(y)
+    w_img, h_img = work.size
+    parts = []
+    for yi, y0 in enumerate(merged):
+        y1 = merged[yi + 1] - 20 if yi + 1 < len(merged) else min(h_img, y0 + int(h_img * 0.45))
+        y0 = max(0, y0 - 20)
+        if y1 <= y0 + 40:
+            continue
+        # Skip "Board of Assessment Appeals" bands — require zoning in the crop head.
+        crop = work.crop((0, y0, w_img, y1))
+        try:
+            crop_text = pytesseract.image_to_string(crop, config="--psm 6") or ""
+        except Exception:
+            continue
+        if not re.search(r"(?i)zoning\s+board\s+of\s+appeals|\bzba\b", crop_text[:400]):
+            continue
+        parts.append(crop_text)
+    return "\n".join(parts)
+
+
 def _ocr_pdf_bytes(data, max_pages=None):
     """OCR a PDF via pdf2image + tesseract. Returns '' on failure."""
     max_pages = max_pages or _OCR_MAX_PAGES
@@ -1894,14 +1955,155 @@ def _ocr_pdf_bytes(data, max_pages=None):
         except Exception:
             return ""
         parts = []
+        zba_bits = []
         for img in images:
             try:
                 parts.append(pytesseract.image_to_string(img) or "")
             except Exception:
                 continue
+            try:
+                zba = _ocr_zba_sections_from_image(img, pytesseract)
+                if zba and len(zba.strip()) > 40:
+                    zba_bits.append(zba)
+            except Exception:
+                pass
+        # Colored ZBA headers on multi-board contact sheets often need higher DPI.
+        if not zba_bits and not re.search(
+            r"(?i)zoning board of appeals", "\n".join(parts)
+        ):
+            try:
+                hi = convert_from_bytes(
+                    data, first_page=1, last_page=min(max_pages, 2), dpi=220
+                )
+                for img in hi:
+                    zba = _ocr_zba_sections_from_image(img, pytesseract)
+                    if zba and len(zba.strip()) > 40:
+                        zba_bits.append(zba)
+            except Exception:
+                pass
+        if zba_bits:
+            parts.extend(zba_bits)
         return "\n".join(parts)
     finally:
         _OCR_THREAD_LOCK.release()
+
+
+def _parse_contact_sheet_roster(text, county):
+    """Parse Name+phone/address lines under a ZONING BOARD OF APPEALS header."""
+    out = []
+    if not text:
+        return out
+    m = re.search(
+        r"(?is)zoning board of appeals\b(.*?)(?=\n\s*(?:library board|recreation|"
+        r"planning commission|board of assessment|special tax|airport commission|"
+        r"economic development|water\s*(?:&|and)\s*sewer)|$)",
+        text,
+    )
+    if not m:
+        return out
+    section = m.group(1)
+    for raw in section.splitlines():
+        line = raw.strip()
+        if not line or re.search(r"(?i)^(ord\.|vacant|members?\b|term\b|phone\b)", line):
+            continue
+        name = _clean_name(line)
+        if name and _is_person(name):
+            out.append(_member(county, name, "sitting", None, None, line[:200]))
+    return out
+
+
+async def fetch_matchboard_members(county):
+    """Pull sitting ZBA members from MatchBoard when the county is mapped."""
+    entity_id = MATCHBOARD_ENTITY_IDS.get(county)
+    if not entity_id or session is None:
+        return []
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Origin": "https://app.matchboard.tech",
+        "Referer": "https://app.matchboard.tech/",
+        "Accept": "application/json",
+    }
+    list_url = f"https://api.matchboard.tech/app/boards?entityId={entity_id}"
+    try:
+        async with session.get(list_url, timeout=TIMEOUT, headers=headers) as resp:
+            if resp.status != 200:
+                return []
+            payload = await resp.json(content_type=None)
+    except Exception:
+        return []
+    boards = (payload.get("data") or {}).get("boards") or []
+    target_ids = []
+    for b in boards:
+        if b.get("entity_id") != entity_id:
+            continue
+        name = b.get("name") or ""
+        if re.search(r"(?i)assessment|building code|construction|housing|tax", name):
+            continue
+        if re.search(
+            r"(?i)(?:board of zoning|zoning board|zoning and appeals|land use zoning)",
+            name,
+        ):
+            target_ids.append(b["id"])
+    # Also honor curated MatchBoard board URLs.
+    for known in KNOWN_BOZA_URLS.get(county, []):
+        m = re.search(r"api\.matchboard\.tech/app/boards/(\d+)", known)
+        if m:
+            bid = int(m.group(1))
+            if bid not in target_ids:
+                target_ids.append(bid)
+    out = []
+    for bid in target_ids:
+        detail_url = f"https://api.matchboard.tech/app/boards/{bid}"
+        try:
+            async with session.get(detail_url, timeout=TIMEOUT, headers=headers) as resp:
+                if resp.status != 200:
+                    continue
+                detail = await resp.json(content_type=None)
+        except Exception:
+            continue
+        board = (detail.get("data") or {}).get("board") or {}
+        positions = board.get("board_positions") or []
+        if isinstance(positions, str):
+            try:
+                positions = json.loads(positions)
+            except Exception:
+                positions = []
+        for p in positions:
+            if not p.get("active", 1):
+                continue
+            fn = (p.get("first_name") or "").strip()
+            ln = (p.get("last_name") or "").strip()
+            raw_name = f"{fn} {ln}".strip(" ,")
+            if not raw_name:
+                continue
+            name = _title_case_name(raw_name)
+            # Keep generational suffixes from source ("Fleming, Jr.").
+            if not _is_person(name.replace(",", "")):
+                continue
+            term_end = None
+            exp = p.get("term_expiration") or ""
+            ym = re.search(r"(20\d{2})", str(exp))
+            if ym:
+                term_end = ym.group(1)
+            gender = (p.get("gender") or "").strip().lower() or None
+            if gender in {"male", "m"}:
+                gender = "male"
+            elif gender in {"female", "f"}:
+                gender = "female"
+            else:
+                gender = None
+            row = _member(
+                county,
+                name,
+                _status_for(term_end),
+                None,
+                term_end,
+                f"MatchBoard {board.get('name') or 'ZBA'}; term_expiration={exp}"[:200],
+            )
+            if gender:
+                row["gender"] = gender
+            out.append(row)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -2332,6 +2534,7 @@ def parse_roster_from_text(text, county):
     members.extend(_parse_board_members_list(text, county))
     members.extend(_parse_district_comma_roster(text, county))
     members.extend(term_rows)
+    members.extend(_parse_contact_sheet_roster(text, county))
     text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
@@ -2340,6 +2543,7 @@ def parse_roster_from_text(text, county):
     members.extend(_parse_board_members_list(text, county))
     members.extend(_parse_district_comma_roster(text, county))
     members.extend(_parse_term_colon_roster(text, county))
+    members.extend(_parse_contact_sheet_roster(text, county))
     # Agenda header: "Chairman – Shasai S. Hendrix"
     for m in re.finditer(
         r"(?i)\b(?:chairman|vice[-\s]?chairman|chairperson)\s*[–—:-]\s*"
@@ -2602,6 +2806,8 @@ async def process_county(county):
     async with semaphore:
         members = []
         try:
+            # MatchBoard sitting rosters (Clarendon, Darlington, …).
+            members.extend(await fetch_matchboard_members(county))
             # Phase 3
             base, boza_url, boza_html = await find_boza_page(county)
             pages = []
@@ -2610,6 +2816,8 @@ async def process_county(county):
             # Also crawl every curated URL for this county (rosters often split).
             for known in KNOWN_BOZA_URLS.get(county, []):
                 if boza_url and known.rstrip("/") == boza_url.rstrip("/"):
+                    continue
+                if "api.matchboard.tech" in known.lower():
                     continue
                 # PDFs / CivicPlus ViewFile binaries must go through fetch_document —
                 # aiohttp text decode of binary PDF is truthy junk.
