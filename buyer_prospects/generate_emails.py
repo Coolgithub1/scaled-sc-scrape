@@ -174,14 +174,14 @@ WHY = {
 }
 
 CTAS = [
-    "Reply SAMPLE and I'll send a short SC excerpt today.",
-    "Reply yes and I'll email a 5-county sample this afternoon.",
-    "One reply and I'll send a sample today. That's the whole ask.",
-    "Can I send a sample today? Reply and I will.",
-    "Reply with yes and I'll send the sample before I close out.",
-    "Tell me where to send a sample and I'll get it over today.",
-    "Reply and I'll send a sample today so you can see the fields.",
-    "Want the sample? Reply now and I'll send it today.",
+    "If this interests you, let me know and I can send a sample.",
+    "If this is useful, let me know and I'll send a sample.",
+    "If this interests you, I can send a sample. Just let me know.",
+    "Let me know if this interests you and I can send a sample.",
+    "If you'd like to see it, let me know and I'll send a sample.",
+    "If this is relevant, let me know and I can send a sample over.",
+    "Happy to send a sample if this interests you. Just say the word.",
+    "If this interests you at all, let me know and I'll send a sample.",
 ]
 
 SIGS = [
