@@ -8,6 +8,7 @@ import json
 import os
 import re
 import threading
+import zipfile
 from datetime import datetime
 from urllib.parse import urlencode, urljoin, urlparse
 
@@ -367,12 +368,15 @@ async def fetch_bytes(url):
     if ckey in cache:
         return cache[ckey]
     data = None
+    denied = False
     for attempt in range(3):  # max 3 retries
         try:
             async with session.get(url, timeout=TIMEOUT, allow_redirects=True) as resp:
                 if resp.status == 200:
                     data = await resp.read()
                     break
+                if resp.status in (403, 503):
+                    denied = True
                 if resp.status in RETRYABLE_STATUS:
                     await asyncio.sleep(0.5 * (attempt + 1))
                     continue
@@ -380,9 +384,62 @@ async def fetch_bytes(url):
         except Exception:
             await asyncio.sleep(0.5 * (attempt + 1))
             continue
+    if data is None and denied and "web.archive.org" not in (url or "").lower():
+        # Same Akamai pattern as HTML fetch — try a Wayback snapshot of the file.
+        archived = await _fetch_wayback_bytes(url)
+        if archived:
+            data = archived
     if data is not None:
         cache[ckey] = data
     return data
+
+
+async def _fetch_wayback_bytes(url):
+    """Fetch raw bytes from a Wayback snapshot of url (PDFs/docx)."""
+    if not url or "web.archive.org" in url.lower():
+        return None
+    ckey = "WAYBACK_BYTES::" + url
+    if ckey in cache:
+        return cache[ckey]
+    api = (
+        "https://archive.org/wayback/available?"
+        + urlencode({"url": url, "timestamp": f"{CURRENT_YEAR}0601"})
+    )
+    snapshot = None
+    try:
+        async with session.get(api, timeout=TIMEOUT, allow_redirects=True) as resp:
+            if resp.status == 200:
+                data = await resp.json(content_type=None)
+                snapshot = (
+                    (data.get("archived_snapshots") or {})
+                    .get("closest", {})
+                    .get("url")
+                )
+    except Exception:
+        snapshot = None
+    if not snapshot:
+        snapshot = f"https://web.archive.org/web/{CURRENT_YEAR}/{url}"
+    # Prefer the iframe-stripped raw capture for binaries.
+    if "/web/" in snapshot and "if_/" not in snapshot:
+        snapshot = snapshot.replace("/web/", "/web/", 1)
+        # Insert if_ after the timestamp segment: /web/YYYYMMDDhhmmss/...
+        snapshot = re.sub(
+            r"(https?://web\.archive\.org/web/\d+)",
+            r"\1if_",
+            snapshot,
+            count=1,
+        )
+    try:
+        async with session.get(snapshot, timeout=TIMEOUT, allow_redirects=True) as resp:
+            if resp.status != 200:
+                return None
+            data = await resp.read()
+            if data and data[:15].lower() != b"<!doctype html>" and len(data) > 200:
+                cache[ckey] = data
+                return data
+    except Exception:
+        return None
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -600,6 +657,15 @@ def _is_person(name):
     tokens = [t.strip(".").lower() for t in name.replace("(", " ").replace(")", " ").split()]
     tokens = [t for t in tokens if t]
     if any(t in _NON_PERSON_WORDS for t in tokens):
+        return False
+    # City + state abbreviation lines ("North Augusta SC", "Edgefield SC").
+    if tokens and re.fullmatch(r"[a-z]{2}", tokens[-1]) and tokens[-1] in {
+        "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id",
+        "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms",
+        "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok",
+        "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
+        "wi", "wy", "dc",
+    }:
         return False
     # Meeting/agenda titles mistaken for people.
     if any(
@@ -1202,7 +1268,14 @@ DRUPAL_YEAR_PARAM = "field_meeting_date_value__vc3_content_date_year_offset"
 def _is_document_link(url, link_text):
     low = (url + " " + link_text).lower()
     path = urlparse(url).path.lower()
-    if "viewfile" in low or path.endswith(".pdf") or ".pdf?" in low:
+    if (
+        "viewfile" in low
+        or "showpublisheddocument" in low
+        or path.endswith(".pdf")
+        or ".pdf?" in low
+        or path.endswith(".docx")
+        or ".docx?" in low
+    ):
         return True
     return any(portal in url.lower() for portal in PORTALS)
 
@@ -1214,6 +1287,10 @@ def _doc_year(url, link_text=""):
     m = re.search(r"ViewFile/(?:Agenda|Minutes?)/_(\d{2})(\d{2})(20\d{2})", blob, re.I)
     if m:
         return int(m.group(3))
+    # Wayback Machine timestamp: /web/20250607205224/... or /web/20250607205224if_/...
+    m = re.search(r"web\.archive\.org/web/((?:19|20)\d{2})\d{8,14}", blob, re.I)
+    if m:
+        return int(m.group(1))
     # Filenames like bza-agenda-package-8-5-26.pdf or 2024-03-01-minutes.pdf
     m = re.search(r"(?:^|[^\d])(20\d{2})(?:[^\d]|$)", blob)
     if m:
@@ -1688,12 +1765,60 @@ def _parse_district_comma_roster(text, county):
     return out
 
 
+def _docx_to_text(data):
+    """Extract plain text from a .docx (OOXML) byte blob."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            xml = zf.read("word/document.xml").decode("utf-8", "ignore")
+    except Exception:
+        return None
+    # Preserve paragraph breaks and tab-separated columns (Edgefield rosters).
+    xml = re.sub(r"<w:tab[^/]*/>", "\t", xml)
+    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"<[^>]+>", "", xml)
+    xml = (
+        xml.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
+        .replace("&apos;", "'")
+    )
+    return xml.strip() or None
+
+
+def _is_binary_roster_url(url):
+    """True for PDFs / ViewFile / Word docs that must go through fetch_document."""
+    low = (url or "").lower()
+    return (
+        low.endswith(".pdf")
+        or ".pdf?" in low
+        or low.endswith(".docx")
+        or ".docx?" in low
+        or "/viewfile/" in low
+        or "showpublisheddocument" in low
+    )
+
+
 async def fetch_document(url):
     """Return extracted text for a document URL, handling PDFs by content sniffing."""
     url = _rewrite_revize_document_url(url)
     data = await fetch_bytes(url)
     if not data:
         return None
+    # Word .docx member lists (Edgefield ZBA Members.docx).
+    if data[:2] == b"PK" and (
+        url.lower().endswith(".docx")
+        or ".docx?" in url.lower()
+        or b"word/document.xml" in data[:8192]
+        or b"[Content_Types].xml" in data[:4096]
+    ):
+        # Confirm OOXML before treating every ZIP as a docx.
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                if "word/document.xml" in zf.namelist():
+                    return _docx_to_text(data)
+        except Exception:
+            pass
     if data[:4] == b"%PDF":
         text = None
         if pdfplumber is not None:
@@ -2123,10 +2248,82 @@ def _parse_board_members_list(text, county):
     return out
 
 
+def _parse_term_colon_roster(text, county):
+    """Parse 'Name / Term: M/YYYY-M/YYYY' rosters (Edgefield ZBA Members.docx).
+
+    Supports one- or two-column layouts where a name line is followed by a
+    Term: line (columns aligned via tabs or 2+ spaces).
+    """
+    out = []
+    if not text or not re.search(
+        r"(?i)zoning board of appeals|board of zoning appeals|\bzba\b",
+        text[:1500],
+    ):
+        # Still allow when the filename/title isn't in the body — require Term:.
+        if not re.search(r"(?i)\bterm\s*:", text):
+            return out
+    lines = text.splitlines()
+    role_re = re.compile(
+        r"(?i)\s*[–—,-]?\s*(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|"
+        r"Chairperson|Chair|Secretary)\s*$"
+    )
+    term_re = re.compile(
+        r"(?i)^term\s*:\s*(\d{1,2})/(\d{4})\s*[-–—]\s*(\d{1,2})/(\d{4})\s*$"
+    )
+
+    def _split_cols(line):
+        return [c.strip() for c in re.split(r"(?:\t+|\s{2,})", line) if c.strip()]
+
+    for i, raw in enumerate(lines):
+        name_cols = _split_cols(raw)
+        if not name_cols or all(term_re.match(c) for c in name_cols):
+            continue
+        if i + 1 >= len(lines):
+            continue
+        term_cols = _split_cols(lines[i + 1])
+        if not term_cols or not all(term_re.match(c) for c in term_cols):
+            continue
+        # Pair left-to-right; ignore address/phone residue columns.
+        for name_raw, term_raw in zip(name_cols, term_cols):
+            if term_re.match(name_raw):
+                continue
+            tm = term_re.match(term_raw)
+            if not tm:
+                continue
+            cleaned = role_re.sub("", name_raw).strip()
+            cleaned = re.sub(r"(?i)^(?:(?:Mr|Ms|Mrs|Dr|Miss|Rev)\.?\s+)+", "", cleaned)
+            name = _clean_name(cleaned) or (
+                _title_case_name(cleaned) if _is_person(_title_case_name(cleaned)) else None
+            )
+            if not name or not _is_person(name):
+                continue
+            term_start, term_end = tm.group(2), tm.group(4)
+            tenure = f"{name_raw.strip()}; {term_raw.strip()}"[:200]
+            out.append(
+                _member(
+                    county,
+                    name,
+                    _status_for(term_end),
+                    term_start,
+                    term_end,
+                    tenure,
+                )
+            )
+    return out
+
+
 def parse_roster_from_text(text, county):
     """Apply text-roster parsers to plain document text (HTML-stripped or PDF)."""
     if not text:
         return []
+    # Dedicated "Zoning Board of Appeals Members" + Term: docs (Edgefield .docx)
+    # — prefer the term-colon parser and skip noisier address/chair heuristics.
+    term_rows = _parse_term_colon_roster(text, county)
+    if term_rows and re.search(
+        r"(?i)zoning board of appeals members|board of zoning appeals members",
+        text[:800],
+    ):
+        return term_rows
     # Numbered membership lists need the full multi-board PDF (Berkeley), so
     # run that parser before BZA-scoping truncates surrounding boards.
     members = []
@@ -2134,6 +2331,7 @@ def parse_roster_from_text(text, county):
     members.extend(_parse_bza_members_lines(text, county))
     members.extend(_parse_board_members_list(text, county))
     members.extend(_parse_district_comma_roster(text, county))
+    members.extend(term_rows)
     text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
@@ -2141,6 +2339,7 @@ def parse_roster_from_text(text, county):
     members.extend(_parse_bza_members_lines(text, county))
     members.extend(_parse_board_members_list(text, county))
     members.extend(_parse_district_comma_roster(text, county))
+    members.extend(_parse_term_colon_roster(text, county))
     # Agenda header: "Chairman – Shasai S. Hendrix"
     for m in re.finditer(
         r"(?i)\b(?:chairman|vice[-\s]?chairman|chairperson)\s*[–—:-]\s*"
@@ -2415,11 +2614,7 @@ async def process_county(county):
                 # PDFs / CivicPlus ViewFile binaries must go through fetch_document —
                 # aiohttp text decode of binary PDF is truthy junk.
                 known_low = known.lower()
-                if (
-                    known_low.endswith(".pdf")
-                    or ".pdf?" in known_low
-                    or "/viewfile/" in known_low
-                ):
+                if _is_binary_roster_url(known):
                     content = await fetch_document(known)
                     if content:
                         members.extend(parse_roster_from_text(content, county))
@@ -2453,7 +2648,7 @@ async def process_county(county):
                     if sub_url in seen_pages:
                         continue
                     seen_pages.add(sub_url)
-                    if sub_url.lower().endswith(".pdf") or ".pdf?" in sub_url.lower():
+                    if _is_binary_roster_url(sub_url):
                         content = await fetch_document(sub_url)
                         if content:
                             members.extend(parse_roster_from_text(content, county))
@@ -2480,11 +2675,7 @@ async def process_county(county):
                 # Also harvest docs linked from curated minutes/agenda pages.
                 for known in KNOWN_BOZA_URLS.get(county, []):
                     known_low = known.lower()
-                    if (
-                        known_low.endswith(".pdf")
-                        or ".pdf?" in known_low
-                        or "/viewfile/" in known_low
-                    ):
+                    if _is_binary_roster_url(known):
                         continue
                     if not re.search(r"(?i)minute|agenda", known):
                         continue

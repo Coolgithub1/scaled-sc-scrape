@@ -67,7 +67,11 @@ KNOWN_BOZA_URLS = {
         "https://www.dorchestercounty.org/government/planning-development/planning-zoning/board-of-zoning-appeals",
     ],
     "Edgefield": [
-        "https://edgefieldcounty.sc.gov/building-permits-applications-and-fees",
+        # Live host often 403 from datacenters; Wayback + direct docx work.
+        "https://web.archive.org/web/20250215101124/https://edgefieldcounty.sc.gov/boards-and-commissions/",
+        "https://edgefieldcounty.sc.gov/boards-and-commissions/",
+        "https://edgefieldcounty.sc.gov/wp-content/uploads/2024/06/Zoning-Board-of-Appeals-Members.docx",
+        "https://web.archive.org/web/20250215073029if_/https://edgefieldcounty.sc.gov/wp-content/uploads/2024/06/Zoning-Board-of-Appeals-Members.docx",
     ],
     "Fairfield": [
         "https://www.fairfieldsc.com/departments/planning_and_zoning/",
@@ -107,7 +111,11 @@ KNOWN_BOZA_URLS = {
         "https://www.jaspercountysc.gov/government/boards-and-commissions/",
     ],
     "Kershaw": [
+        # Live host Akamai-blocks datacenters; Wayback has BZA agendas/minutes.
+        "https://web.archive.org/web/20250607205224/https://www.kershaw.sc.gov/government/departments-h-q/planning-zoning/board-of-zoning-appeals-planning-commission",
         "https://www.kershaw.sc.gov/government/departments-h-q/planning-zoning/board-of-zoning-appeals-planning-commission",
+        # March 2025 agenda packet embeds May 2024 minutes with Members Present.
+        "https://web.archive.org/web/20250607205224if_/https://www.kershaw.sc.gov/home/showpublisheddocument/16352/638757334123430000",
     ],
     "Lancaster": [
         "https://www.lancastercountysc.gov/447/Board-of-Zoning-Appeals",
