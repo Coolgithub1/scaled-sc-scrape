@@ -25,7 +25,6 @@ KNOWN_BOZA_URLS = {
         "https://www.beaufortcountysc.gov/zoning-appeals-board/index.html",
         "https://www.beaufortcountysc.gov/zoning-appeals-board/former-members.html",
         "https://www.beaufortcountysc.gov/zoning-appeals-board/minutes/index.html",
-        "https://app.matchboard.tech/boards?entityId=7&entityState=SC&name=Beaufort&type=county&boardId=37",
     ],
     "Berkeley": [
         "https://www.berkeleycountysc.gov/planning/board-of-zoning-appeals",
@@ -87,7 +86,6 @@ KNOWN_BOZA_URLS = {
     ],
     "Horry": [
         "https://www.horrycountysc.gov/departments/planning-and-zoning/board-of-zoning-appeals/",
-        "https://horrycounty.granicus.com/ViewPublisher.php?view_id=3",
     ],
     "Jasper": [
         "https://www.jaspercountysc.gov/government/boards-and-commissions/",
@@ -126,7 +124,6 @@ KNOWN_BOZA_URLS = {
     ],
     "Pickens": [
         "https://www.co.pickens.sc.us/departments/planning/board_of_appeals_agendas___minutes/index.php",
-        "https://www.co.pickens.sc.us/government/county_council/boards___commissions.php",
     ],
     "Richland": [
         "https://www.richlandcountysc.gov/Government/Get-Involved/Boards-and-Committees/Board-of-Zoning-Appeals",
@@ -145,6 +142,5 @@ KNOWN_BOZA_URLS = {
     ],
     "York": [
         "https://www.yorkcountysc.gov/1198/Board-of-Zoning-Appeals",
-        "https://yorkcountygov.granicus.com/boards/w/83853d22a8adcc01/boards/42668",
     ],
 }

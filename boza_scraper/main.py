@@ -467,6 +467,9 @@ _NON_PERSON_WORDS = {
     "applicant", "application", "variance", "hardship", "exception", "request",
     "information", "signature", "signed", "email", "phone", "address", "other",
     "instructions", "form", "yes", "site", "subject", "location", "map",
+    "councilmember", "councilman", "councilwoman", "subcommittee", "workshop",
+    "ceremony", "hearing", "budget", "recreation", "nuisance", "codes",
+    "directory", "staff", "position", "term", "fire", "arts", "homes",
 }
 
 
@@ -510,6 +513,13 @@ def _clean_name(raw):
     raw = re.sub(r"District\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"At[-\s]?Large", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"Seat\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
+    # Strip trailing role labels glued onto names.
+    raw = re.sub(
+        r"(?i)\s*(?:vice[-\s]?chair(?:man|person)?|chair(?:man|woman|person)?|"
+        r"secretary|councilmember|council\s*member)\s*$",
+        " ",
+        raw,
+    )
     # Keep quoted nicknames as plain tokens ("Ray" -> Ray) so minutes aliases match.
     raw = re.sub(r"[\"\u201c\u201d\u2018\u2019']", " ", raw)
     # An address/phone starts with a digit; cut the cell there.
@@ -758,14 +768,34 @@ def _parse_lastname_comma_roster(text, county):
     return out
 
 
+def _bza_scoped_text(text):
+    """Prefer the Board of Zoning Appeals section on multi-board pages."""
+    if not text:
+        return text
+    m = re.search(
+        r"(?is)((?:board of zoning appeals|zoning board of appeals|"
+        r"zoning board of adjustment|board of adjustment(?:s)? and appeals|"
+        r"zoning appeals board|board of zoning appeal)\b.*?)"
+        r"(?=\n(?:[A-Z][^\n]{0,40}\n)?(?:board of|commission|committee|authority|council)\b|"
+        r"\n[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+Board\b|$)",
+        text,
+    )
+    if m and len(m.group(1)) > 80:
+        return m.group(1)
+    return text
+
+
 def parse_current_members(html, county):
     members = []
     if not html:
         return members
     # PDF bytes sometimes sneak through as latin1 text from known URL overrides.
-    if html.lstrip().startswith("%PDF"):
+    if html.lstrip().startswith("%PDF") or "\x00" in html[:200]:
         return members
-    soup = BeautifulSoup(html, "html.parser")
+    try:
+        soup = BeautifulSoup(html, "html.parser")
+    except Exception:
+        return members
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
 
@@ -773,7 +803,7 @@ def parse_current_members(html, county):
     for table in soup.find_all("table"):
         members.extend(_parse_table(table, county))
 
-    text = soup.get_text("\n", strip=True)
+    text = _bza_scoped_text(soup.get_text("\n", strip=True))
 
     # 2. Structured text rosters.
     members.extend(_parse_current_members_block(text, county))
@@ -803,19 +833,27 @@ def _member_subpages(boza_url, boza_html):
     """Collect roster/minutes/agenda links from the BOZA page."""
     soup = BeautifulSoup(boza_html, "html.parser")
     targets, seen = [], set()
-    hints = (
-        "member", "roster", "minute", "agenda", "attendance", "former",
-        "matchboard", "boards?", "commission",
-    )
     for a in soup.find_all("a", href=True):
         text = (a.get_text(" ", strip=True) or "").lower()
-        href = a["href"].lower()
+        href = (a["href"] or "").lower()
         blob = text + " " + href
-        if any(h in blob for h in hints):
-            target = urljoin(boza_url, a["href"])
-            if target not in seen and target != boza_url and not target.lower().startswith("mailto:"):
-                seen.add(target)
-                targets.append(target)
+        # Stay on BZA-related pages — never fan out to every county board.
+        zoningish = any(k in blob for k in ("zoning", "appeal", "bza", "zba", "zboa"))
+        rosterish = any(k in blob for k in ("member", "roster", "former", "minute", "agenda", "attendance"))
+        if not rosterish:
+            continue
+        if not zoningish and not any(k in blob for k in ("former member", "current member", "minute", "agenda")):
+            # Allow former/current/minutes links that live under the ZBA folder.
+            path = urlparse(urljoin(boza_url, a["href"])).path.lower()
+            if not any(k in path for k in ("zoning", "appeal", "bza", "zba", "zboa")):
+                continue
+        target = urljoin(boza_url, a["href"])
+        if target not in seen and target != boza_url and not target.lower().startswith("mailto:"):
+            # Skip county-wide MatchBoard directories (all boards).
+            if "matchboard.tech" in target.lower() and "boardid=" not in target.lower():
+                continue
+            seen.add(target)
+            targets.append(target)
     return targets[:12]
 
 
@@ -1424,6 +1462,7 @@ def parse_roster_from_text(text, county):
     """Apply text-roster parsers to plain document text (HTML-stripped or PDF)."""
     if not text:
         return []
+    text = _bza_scoped_text(text)
     members = []
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
@@ -1942,7 +1981,10 @@ def _merge_members(base, other):
     # roster row or still current (term_end >= this year) => sitting; else historical.
     end = _year_value(merged.get("term_end"))
     if merged.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
-        merged["status"] = "sitting"
+        if end is not None and end < CURRENT_YEAR:
+            merged["status"] = "historical"
+        else:
+            merged["status"] = "sitting"
     elif end is not None and end < CURRENT_YEAR:
         merged["status"] = "historical"
     else:
@@ -2017,9 +2059,12 @@ def augment_and_dedupe(all_members):
                     member["gender"] = raw_gender
             # Final status normalization from evidence (roster / term years).
             end = _year_value(member.get("term_end"))
-            if member.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
+            # Expired terms win over the roster flag (former-member pages).
+            if end is not None and end < CURRENT_YEAR:
+                member["status"] = "historical"
+            elif member.get("_from_roster") or (end is not None and end >= CURRENT_YEAR):
                 member["status"] = "sitting"
-            elif end is not None and end < CURRENT_YEAR and not member.get("_from_roster"):
+            elif (member.get("status") or "").lower() == "historical":
                 member["status"] = "historical"
             # Drop internal bookkeeping flags / retired columns before CSV output.
             member.pop("_from_roster", None)
