@@ -580,16 +580,26 @@ def _clean_name(raw):
     raw = re.sub(r"Seat\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     # Strip trailing role labels glued onto names.
     raw = re.sub(
-        r"(?i)\s*(?:vice[-\s]?chair(?:man|person)?|chair(?:man|woman|person)?|"
+        r"(?i)\s*(?:vice[-\s]?chair(?:man|woman|person)?|chair(?:man|woman|person)?|"
         r"secretary|councilmember|council\s*member)\s*$",
         " ",
         raw,
     )
+    # Leftover hyphenated role stubs ("Tom Audette Vice-").
+    raw = re.sub(r"(?i)\s*vice-?\s*$", " ", raw)
     # Keep quoted nicknames as plain tokens ("Ray" -> Ray) so minutes aliases match.
     raw = re.sub(r"[\"\u201c\u201d\u2018\u2019']", " ", raw)
     # An address/phone starts with a digit; cut the cell there.
     raw = re.split(r"\d", raw, 1)[0]
     tokens = re.findall(r"[A-Z][a-zA-Z.'\-]*", raw)
+    # Drop role tokens that survived as capitalized words.
+    tokens = [
+        t for t in tokens
+        if t.lower().rstrip(".") not in {
+            "vice", "chair", "chairman", "chairwoman", "chairperson",
+            "secretary", "councilmember", "member",
+        }
+    ]
     if len(tokens) < 2:
         return None
     name = " ".join(tokens[:4]).strip()
@@ -825,11 +835,18 @@ def _parse_district_roster_text(text, county):
     # Calhoun BZA: Name (role) then District N with no dates.
     if not out:
         for m in re.finditer(
-            r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3})(?:\s*\([^)]+\))?\s*\n+District\s*\d+\s*$",
+            r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3})(?:\s*\([^)]+\))?\s*\n+"
+            r"(?:(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|Chairperson|Chair|"
+            r"Councilmember|Council\s*Member)\s*\n+)?"
+            r"District\s*\d+\s*$",
             scope,
         ):
             raw = re.sub(r"\s*\([^)]*\)\s*", " ", m.group(1)).strip()
-            if re.search(r"(?i)zoning|district|board|appeals", raw):
+            if re.search(r"(?i)zoning|district|board|appeals|council|vice|chair", raw):
+                continue
+            # Skip county-council directory widgets embedded on BZA pages (York).
+            block = m.group(0)
+            if re.search(r"(?i)council\s*member|councilmember|vice[-\s]?chair", block):
                 continue
             name = _clean_name(raw) or _title_case_name(raw)
             if name and _is_person(name):
