@@ -142,6 +142,7 @@ KNOWN_BOZA_URLS = {
         "https://www.williamsburgcounty.sc.gov/AgendaCenter",
     ],
     "York": [
-        "https://www.yorkcountysc.gov/1198/Board-of-Zoning-Appeals",
+        # CivicPlus page 1198 currently renders council seats, not BZA roster.
+        "https://www.yorkcountysc.gov/AgendaCenter",
     ],
 }
