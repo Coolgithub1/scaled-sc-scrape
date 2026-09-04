@@ -7,3 +7,5 @@ pdfplumber
 openai
 playwright
 diskcache
+pytesseract
+pdf2image
