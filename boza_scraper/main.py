@@ -989,7 +989,23 @@ def _member_subpages(boza_url, boza_html):
                 continue
             seen.add(target)
             targets.append(target)
-    return targets[:12]
+    # Prefer minutes/agenda PDFs so attendance harvest isn't crowded out by
+    # unrelated nav PDFs (org charts, applications).
+    def _rank(u):
+        low = u.lower()
+        score = 0
+        if "minute" in low:
+            score -= 20
+        if "agenda" in low:
+            score -= 10
+        if any(k in low for k in ("zoning", "appeal", "bza", "zba")):
+            score -= 5
+        if any(k in low for k in ("application", "orgchart", "org-chart", "dock")):
+            score += 20
+        return (score, u)
+
+    targets.sort(key=_rank)
+    return targets[:40]
 
 
 # ---------------------------------------------------------------------------
@@ -1655,6 +1671,46 @@ def parse_minutes_attendance(text):
         if out:
             return out
 
+    # Beaufort two-column dump: "MEMBERS PRESENT MEMBERS ABSENT" with both
+    # columns collapsed onto the same lines by PDF text extraction.
+    two_col = re.search(
+        r"(?is)MEMBERS\s+PRESENT\s+MEMBERS\s+ABSENT\s*"
+        r"(.*?)(?=STAFF\s+PRESENT|ATTORNEY\s+PRESENT|CALL TO ORDER|\Z)",
+        head,
+    )
+    if two_col:
+        present_parts, absent_parts = [], []
+        for line in two_col.group(1).splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            m = re.match(
+                r"(?i)^((?:Mr|Mrs|Ms|Dr|Miss)\.\s+.+?)"
+                r"\s+((?:Mr|Mrs|Ms|Dr|Miss)\.\s+.+|VACANT(?:\s+\w+)?|One)\s*$",
+                line,
+            )
+            if m:
+                present_parts.append(m.group(1))
+                right = m.group(2)
+                if not re.search(r"(?i)^(?:VACANT|One)\b", right):
+                    absent_parts.append(right)
+            elif not re.search(r"(?i)^(?:VACANT|One)\s*$", line):
+                present_parts.append(line)
+        present_names, absent_names = [], []
+        for p in present_parts:
+            p = re.sub(r"(?i)\(\s*via\s+zoom\s*\)", " ", p)
+            present_names.extend(_parse_attendance_names(p))
+        for p in absent_parts:
+            p = re.sub(r"(?i)\(\s*via\s+zoom\s*\)", " ", p)
+            absent_names.extend(_parse_attendance_names(p))
+        present_keys = {_norm_name_key(n) for n in present_names}
+        out = [{"name": n, "attendance": "present"} for n in present_names]
+        for n in absent_names:
+            if _norm_name_key(n) not in present_keys:
+                out.append({"name": n, "attendance": "absent"})
+        if out:
+            return out
+
     if not re.search(
         r"(?i)\bmembers?\b|(?:^|\n)\s*present\s*:|commission(?:ers?)?\s+present|"
         r"were\s+present",
@@ -1774,9 +1830,9 @@ def attendance_extract(county, documents, roster_keys=None):
         term_start = str(years[0]) if years else None
         term_end = str(years[-1]) if years else None
         on_roster = key in roster_keys
-        # Still appearing in the current year's minutes → treat as sitting even
-        # if the static roster page omitted them; otherwise historic.
-        if on_roster or (years and years[-1] >= CURRENT_YEAR):
+        # Still appearing in this year or last year's minutes → sitting
+        # (rosters lag; Nov 2025 minutes are still the current board in 2026).
+        if on_roster or (years and years[-1] >= CURRENT_YEAR - 1):
             status = "sitting"
         else:
             status = "historical"
@@ -2001,6 +2057,7 @@ async def process_county(county):
                     pages.append((known, html))
 
             seen_pages = set()
+            early_attendance_docs = []
             for page_url, page_html in pages:
                 if page_url in seen_pages:
                     continue
@@ -2009,6 +2066,8 @@ async def process_county(county):
                     content = await fetch_document(page_url)
                     if content:
                         members.extend(parse_roster_from_text(content, county))
+                        if _content_is_minutes(content):
+                            early_attendance_docs.append((content, _doc_year(page_url)))
                     continue
                 members.extend(parse_current_members(page_html, county))
                 for sub_url in _member_subpages(page_url, page_html):
@@ -2019,7 +2078,13 @@ async def process_county(county):
                         content = await fetch_document(sub_url)
                         if content:
                             members.extend(parse_roster_from_text(content, county))
-                            # Minutes PDFs also feed attendance later via docs list.
+                            if _content_is_minutes(content) and re.search(
+                                r"(?i)zoning|appeal|\bbza\b|board of appeals",
+                                content[:3000],
+                            ):
+                                early_attendance_docs.append(
+                                    (content, _doc_year(sub_url, ""))
+                                )
                         continue
                     sub_html = await fetch(sub_url, allow_render=True)
                     if sub_html:
@@ -2030,16 +2095,33 @@ async def process_county(county):
             roster_keys = {_norm_name_key(n) for n in roster_names if n}
 
             # Phase 4 + 5: year-by-year historic minutes + attendance parse + LLM.
+            attendance_docs = list(early_attendance_docs)
             if base:
                 docs = await find_minutes_docs(base, boza_url, boza_html)
+                # Also harvest docs linked from curated minutes/agenda pages.
+                for known in KNOWN_BOZA_URLS.get(county, []):
+                    if known.lower().endswith(".pdf") or ".pdf?" in known.lower():
+                        continue
+                    if not re.search(r"(?i)minute|agenda", known):
+                        continue
+                    known_html = await fetch(known, allow_render=True)
+                    if known_html:
+                        docs.extend(
+                            _collect_docs_from_html(
+                                known, known_html, set(), assume_bza=True
+                            )
+                        )
                 # Attendance parsing is cheap — use the full year-sampled set so
                 # term spans cover the whole archive (not just the oldest chunk).
-                attendance_docs = []
                 scanned = 0
+                seen_att_urls = set()
                 for doc in docs:
                     if scanned >= MAX_DOCS_SCAN:
                         break
                     scanned += 1
+                    if doc["url"] in seen_att_urls:
+                        continue
+                    seen_att_urls.add(doc["url"])
                     content = await fetch_document(doc["url"])
                     if not content:
                         continue
@@ -2061,23 +2143,23 @@ async def process_county(county):
                         continue
                     attendance_docs.append((content, doc.get("year")))
 
-                if attendance_docs:
-                    members.extend(
-                        attendance_extract(county, attendance_docs, roster_keys)
-                    )
-                    # LLM only on a year-spread subset (cost/latency bound).
-                    llm_docs = _spread_docs_for_llm(attendance_docs, MAX_DOCS_KEEP)
-                    excerpts = [_relevant_excerpt(text) for text, _ in llm_docs]
-                    extracted = await asyncio.to_thread(
-                        llm_extract, county, excerpts, roster_names
-                    )
-                    for item in extracted:
-                        key = _norm_name_key(item.get("name") or "")
-                        if key and key not in roster_keys:
-                            # Never let the LLM promote a non-roster person to
-                            # sitting just because they were "present" in old minutes.
-                            item["status"] = "historical"
-                        members.append(item)
+            if attendance_docs:
+                members.extend(
+                    attendance_extract(county, attendance_docs, roster_keys)
+                )
+                # LLM only on a year-spread subset (cost/latency bound).
+                llm_docs = _spread_docs_for_llm(attendance_docs, MAX_DOCS_KEEP)
+                excerpts = [_relevant_excerpt(text) for text, _ in llm_docs]
+                extracted = await asyncio.to_thread(
+                    llm_extract, county, excerpts, roster_names
+                )
+                for item in extracted:
+                    key = _norm_name_key(item.get("name") or "")
+                    if key and key not in roster_keys:
+                        # Never let the LLM promote a non-roster person to
+                        # sitting just because they were "present" in old minutes.
+                        item["status"] = "historical"
+                    members.append(item)
         except Exception as exc:  # log any errors but continue
             print(f"error [{county}]: {exc}")
 
