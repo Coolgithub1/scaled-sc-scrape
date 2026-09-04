@@ -1270,8 +1270,17 @@ _ATTENDANCE_STOP = re.compile(
 
 def _fix_ocr_name_gaps(text):
     """Repair PDF extractions like 'Pad gett', 'Brad y', 'Chairm an'."""
+    def _join(m):
+        left, right = m.group(1), m.group(2)
+        # Never glue prepositions/articles onto the prior word ("Board of").
+        if right.lower() in {
+            "of", "to", "in", "on", "or", "an", "as", "is", "at", "by", "be",
+        }:
+            return m.group(0)
+        return left + right
+
     # Trailing 1-2 letter fragment: "Brad y" -> "Brady", "Chairm an" -> "Chairman"
-    text = re.sub(r"\b([A-Za-z]{4,})\s+([a-z]{1,2})\b", r"\1\2", text)
+    text = re.sub(r"\b([A-Za-z]{4,})\s+([a-z]{1,2})\b", _join, text)
     # Split surname fragment: "Pad gett" / "Dav ies" -> "Padgett" / "Davies"
     text = re.sub(r"\b([A-Z][a-z]{1,3})\s+([a-z]{2,4})\b", r"\1\2", text)
     return text
@@ -1298,7 +1307,7 @@ def _parse_attendance_names(section):
     section = re.sub(
         r"(?i)\b(members?\s+present|members?\s+absent|members?|present|absent|"
         r"commission(?:ers?)?\s+present)\s*:?\s*",
-        "\n",
+        " ",
         section,
     )
     role_words = {
@@ -1306,35 +1315,41 @@ def _parse_attendance_names(section):
         "vicechair", "vice-chair", "vice-chairman", "commissioner", "member",
         "none",
     }
-    for raw_line in section.splitlines():
-        line = _fix_ocr_name_gaps(raw_line)
-        line = _ATTENDANCE_ROLE_RE.sub(" ", line).strip(" \t-–—,:;")
-        if not line:
+    # Split first, then strip roles — never let role regex eat comma delimiters.
+    parts = re.split(r"\s*,\s*|\s+and\s+", section)
+    for part in parts:
+        part = _fix_ocr_name_gaps(part)
+        part = re.sub(
+            r"(?i)^(?:Vice[-\s]?Chair(?:man)?|Chairman|Chairperson|Chair|"
+            r"Secretary|Commissioner|Member)\s+",
+            "",
+            part,
+        )
+        part = re.sub(
+            r"(?i)\s+(?:Vice[-\s]?Chair(?:man)?|Chairman|Chairperson|Chair|"
+            r"Secretary|Commissioner|Member)\s*$",
+            "",
+            part,
+        )
+        part = part.strip(" \t-–—,:;.")
+        part = re.sub(r"\s+", " ", part)
+        part = _title_case_name(part)
+        if not part or not _is_person(part):
             continue
-        # A line may list multiple people separated by commas or "and".
-        parts = re.split(r"\s*,\s*|\s+and\s+", line)
-        for part in parts:
-            part = _fix_ocr_name_gaps(part)
-            part = _ATTENDANCE_ROLE_RE.sub(" ", part).strip(" \t-–—,:;")
-            part = re.sub(r"\s+", " ", part)
-            part = _title_case_name(part)
-            if not part or not _is_person(part):
-                continue
-            low = part.lower()
-            if low.replace(" ", "").replace("-", "") in role_words:
-                continue
-            # Reject leftover institutional phrases.
-            if any(
-                bad in low
-                for bad in (
-                    "board of", "zoning", "appeals", "department", "county",
-                    "planning", "minutes", "agenda", "staff",
-                    "hardship", "variance", "applicant", "owner",
-                    "information", "signature", "property",
-                )
-            ):
-                continue
-            names.append(part)
+        low = part.lower()
+        if low.replace(" ", "").replace("-", "") in role_words:
+            continue
+        if any(
+            bad in low
+            for bad in (
+                "board of", "zoning", "appeals", "department", "county",
+                "planning", "minutes", "agenda", "staff",
+                "hardship", "variance", "applicant", "owner",
+                "information", "signature", "property",
+            )
+        ):
+            continue
+        names.append(part)
     # Unique, preserve order.
     seen, out = set(), []
     for n in names:
