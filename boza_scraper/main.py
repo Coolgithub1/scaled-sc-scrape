@@ -12,9 +12,11 @@ from urllib.parse import urljoin, urlparse
 
 import aiohttp
 import pandas as pd
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from tqdm import tqdm
 import gender_guesser.detector as gender_guesser
+import warnings
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 try:
     import pdfplumber
@@ -195,6 +197,24 @@ async def fetch_rendered(url):
                 await page.wait_for_load_state("networkidle", timeout=8000)
             except Exception:
                 pass
+            # Dismiss common cookie / OneTrust / GDPR banners so roster HTML loads.
+            for sel in (
+                "button#onetrust-accept-btn-handler",
+                "button.accept-cookies",
+                "button:has-text('Accept All')",
+                "button:has-text('Accept all')",
+                "button:has-text('I Accept')",
+                "button:has-text('Agree')",
+                "a:has-text('Accept')",
+            ):
+                try:
+                    loc = page.locator(sel).first
+                    if await loc.count() and await loc.is_visible():
+                        await loc.click(timeout=1500)
+                        await page.wait_for_timeout(500)
+                        break
+                except Exception:
+                    pass
             # Give late SPA route/content a beat to paint.
             await page.wait_for_timeout(750)
             text = await page.content()
@@ -481,12 +501,22 @@ def _is_person(name):
         return False
     if len(name) > 60:
         return False
+    # PDF rosters are often ALL CAPS — normalize before token checks.
     if name.isupper() and len(name.split()) >= 2:
-        # "PROPERTY OWNER" etc.
-        return False
+        name = _title_case_name(name)
     tokens = [t.strip(".").lower() for t in name.replace("(", " ").replace(")", " ").split()]
     tokens = [t for t in tokens if t]
     if any(t in _NON_PERSON_WORDS for t in tokens):
+        return False
+    # Meeting/agenda titles mistaken for people.
+    if any(
+        bad in " ".join(tokens)
+        for bad in (
+            "meeting", "session", "download", "agenda", "minutes", "workshop",
+            "cancellation", "orientation", "subcommittee", "work session",
+            "tax advisory", "sales tax", "video for",
+        )
+    ):
         return False
     alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
     if len(alpha) < 2:
