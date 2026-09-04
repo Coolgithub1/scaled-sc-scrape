@@ -129,6 +129,8 @@ KNOWN_BOZA_URLS = {
     "McCormick": [
         "https://www.mccormickcountysc.org/how_do_i/boards-commissions.php",
         "https://www.mccormickcountysc.org/government/agendas___minutes.php",
+        "https://cms5.revize.com/revize/mccormickcountysc/Agenda%20&%20Minutes/Board%20of%20Zoning%20Appeals/BZA%20agenda%20Nov.%2013.pdf",
+        "https://cms5.revize.com/revize/mccormickcountysc/Agenda%20&%20Minutes/Zoning/4-23-26.pdf",
     ],
     "Newberry": [
         "https://www.newberrycounty.gov/boards-commissions/board-zoning-appeals",

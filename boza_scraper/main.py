@@ -1558,6 +1558,7 @@ def _rewrite_revize_document_url(url):
     """Map broken county-host document_center PDFs onto the Revize CDN host."""
     if not url:
         return url
+    # Pickens: document_center PDFs 404 on the county host.
     m = re.search(
         r"(?i)https?://(?:www\.)?co\.pickens\.sc\.us/.+?/(document_center/.+\.pdf)",
         url,
@@ -1567,8 +1568,6 @@ def _rewrite_revize_document_url(url):
         from urllib.parse import quote
         enc = "/".join(quote(p) if p else p for p in path.split("/"))
         return "https://cms5.revize.com/revize/pickenscountysc/" + enc
-    # Relative document_center paths already absolutized by urljoin may still
-    # sit on the county host with spaces; normalize those too.
     m = re.search(
         r"(?i)^(https?://(?:www\.)?co\.pickens\.sc\.us/)(.*?)(document_center/.+\.pdf)",
         url,
@@ -1578,6 +1577,27 @@ def _rewrite_revize_document_url(url):
         from urllib.parse import quote
         enc = "/".join(quote(p) if p else p for p in path.split("/"))
         return "https://cms5.revize.com/revize/pickenscountysc/" + enc
+    # McCormick: Agenda & Minutes PDFs resolve on the Revize CDN only.
+    m = re.search(
+        r"(?i)https?://(?:www\.)?mccormickcountysc\.org/+(?:government/+)?"
+        r"(Agenda\s*&\s*Minutes/.+\.pdf)",
+        url,
+    )
+    if m:
+        path = m.group(1).split("?")[0]
+        from urllib.parse import quote
+        enc = "/".join(quote(p) if p else p for p in path.split("/"))
+        return "https://cms5.revize.com/revize/mccormickcountysc/" + enc
+    m = re.search(
+        r"(?i)https?://cms5\.revize\.com/revize/mccormickcountysc/"
+        r"(?:government/)+(Agenda\s*&\s*Minutes/.+\.pdf)",
+        url,
+    )
+    if m:
+        path = m.group(1).split("?")[0]
+        from urllib.parse import quote
+        enc = "/".join(quote(p) if p else p for p in path.split("/"))
+        return "https://cms5.revize.com/revize/mccormickcountysc/" + enc
     return url
 
 
