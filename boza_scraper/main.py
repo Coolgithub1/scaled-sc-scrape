@@ -1280,18 +1280,47 @@ async def fetch_document(url):
     if not data:
         return None
     if data[:4] == b"%PDF":
-        if pdfplumber is None:
-            return None
+        text = None
+        if pdfplumber is not None:
+            try:
+                parts = []
+                with pdfplumber.open(io.BytesIO(data)) as pdf:
+                    for page in pdf.pages[:8]:
+                        parts.append(page.extract_text() or "")
+                text = "\n".join(parts)
+            except Exception:
+                text = None
+        # Image-only / scanned minutes: OCR first few pages.
+        if (not text or len(text.strip()) < 80) and len(data) < 12_000_000:
+            ocr_text = await asyncio.to_thread(_ocr_pdf_bytes, data)
+            if ocr_text and len(ocr_text.strip()) > len((text or "").strip()):
+                text = ocr_text
+        return text
+    try:
+        html = data.decode("utf-8", "ignore")
+        return BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+    except Exception:
+        return None
+
+
+def _ocr_pdf_bytes(data, max_pages=3):
+    """OCR a PDF via pdf2image + tesseract. Returns '' on failure."""
+    try:
+        import pytesseract
+        from pdf2image import convert_from_bytes
+    except Exception:
+        return ""
+    try:
+        images = convert_from_bytes(data, first_page=1, last_page=max_pages, dpi=200)
+    except Exception:
+        return ""
+    parts = []
+    for img in images:
         try:
-            parts = []
-            with pdfplumber.open(io.BytesIO(data)) as pdf:
-                for page in pdf.pages[:8]:
-                    parts.append(page.extract_text() or "")
-            return "\n".join(parts)
+            parts.append(pytesseract.image_to_string(img) or "")
         except Exception:
-            return None
-    html = data.decode("utf-8", "ignore")
-    return BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+            continue
+    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
