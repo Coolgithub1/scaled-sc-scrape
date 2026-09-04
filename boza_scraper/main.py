@@ -54,6 +54,32 @@ _OCR_DPI = 150
 _OCR_MAX_BYTES = 4_000_000  # skip giant scanned packets
 _OCR_TIMEOUT_SEC = 45
 
+# Broken SGML marked sections (e.g. <![ila3]>) crash html.parser on some
+# CivicPlus AgendaCenter pages (Williamsburg). Strip non-CDATA / non-IE ones.
+_BAD_MARKED_SECTION_RE = re.compile(
+    r"<!\[(?!(?:CDATA|if\b))[^\]]*\]>",
+    re.IGNORECASE,
+)
+
+
+def _soup(html):
+    """BeautifulSoup wrapper that tolerates broken marked sections."""
+    if not html:
+        return BeautifulSoup("", "html.parser")
+    try:
+        return BeautifulSoup(html, "html.parser")
+    except Exception:
+        cleaned = _BAD_MARKED_SECTION_RE.sub("", html)
+        try:
+            return BeautifulSoup(cleaned, "html.parser")
+        except Exception:
+            # Last resort: drop all marked sections, then give up to empty soup.
+            cleaned = re.sub(r"<!\[.*?\]>", "", html, flags=re.S)
+            try:
+                return BeautifulSoup(cleaned, "html.parser")
+            except Exception:
+                return BeautifulSoup("", "html.parser")
+
 COLUMNS = [
     "state", "county", "name", "status", "term_start", "term_end",
     "gender", "tenure",
@@ -119,7 +145,7 @@ def _needs_js_render(html):
     """True when static HTML looks like an empty SPA shell / JS-gated page."""
     if not html:
         return True
-    soup = BeautifulSoup(html, "html.parser")
+    soup = _soup(html)
     text = soup.get_text(" ", strip=True)
     links = soup.find_all("a", href=True)
     if len(text) < 500 and len(links) < 8:
@@ -352,7 +378,7 @@ def _looks_like_boza(html):
     if any(bad in title for bad in ("404", "not found", "error", "redirect", "access denied", "denied")):
         return False
     # Prefer visible text so cookie-CMP / minified JS "bza" tokens do not match.
-    soup = BeautifulSoup(html, "html.parser")
+    soup = _soup(html)
     for tag in soup(["script", "style", "noscript", "template"]):
         tag.decompose()
     visible = (title + " " + soup.get_text(" ", strip=True)).lower()
@@ -377,7 +403,7 @@ async def _reachable_bases(county):
 
 def _homepage_boza_links(base, root_html):
     """Scan homepage nav for links that look like a zoning/appeals board page."""
-    soup = BeautifulSoup(root_html, "html.parser")
+    soup = _soup(root_html)
     scored = []
     for a in soup.find_all("a", href=True):
         text = (a.get_text(" ", strip=True) or "").lower()
@@ -399,7 +425,7 @@ def _homepage_boza_links(base, root_html):
 
 def _planning_hub_links(base, root_html):
     """Planning/zoning department hubs often link to the BZA one level down."""
-    soup = BeautifulSoup(root_html, "html.parser")
+    soup = _soup(root_html)
     hubs = []
     for a in soup.find_all("a", href=True):
         blob = ((a.get_text(" ", strip=True) or "") + " " + a["href"]).lower()
@@ -428,7 +454,7 @@ async def find_boza_page(county):
         if not html:
             continue
         # Accept known pages even when soft filters are strict — they were curated.
-        if _looks_like_boza(html) or len(BeautifulSoup(html, "html.parser").get_text(" ", strip=True)) > 400:
+        if _looks_like_boza(html) or len(_soup(html).get_text(" ", strip=True)) > 400:
             # Derive a site root for subsequent archive crawls.
             parsed = urlparse(known)
             base = f"{parsed.scheme}://{parsed.netloc}"
@@ -468,7 +494,7 @@ async def find_boza_page(county):
         search_url = base + "/search?q=Board+of+Zoning+Appeals"
         html = await fetch(search_url, allow_render=True)
         if html:
-            soup = BeautifulSoup(html, "html.parser")
+            soup = _soup(html)
             for a in soup.find_all("a", href=True):
                 href = a["href"].lower()
                 if ("zoning" in href and "appeal" in href) or href.endswith("bza.php") or "/bza" in href:
@@ -803,6 +829,78 @@ def _parse_lastname_comma_roster(text, county):
     return out
 
 
+def _parse_numbered_membership_roster(text, county):
+    """Berkeley master-list style: '# 1 MR. RICHARD W. SMITH (Chair) December 31, 2024'."""
+    out = []
+    # Require an explicit BZA heading — never scrape other numbered boards.
+    # Stop at the next board title / "Updated" footer, not at COUNCIL/DISTRICT labels.
+    bza = re.search(
+        r"(?is)((?:berk(?:e)?ley\s+county\s+)?board of zoning appeals)\b(.*?)(?="
+        r"Updated\s+\d|"
+        r"Board of Zoning Appeals\s*Page|"
+        r"\n(?:[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,8}\s+)?"
+        r"(?:Commission|Committee|Authority)\b|"
+        r"\n[A-Z][A-Z0-9 /,&'\-]{10,80}(?:BOARD|COMMISSION|COMMITTEE)\b)",
+        text,
+    )
+    if not bza:
+        return out
+    scope = bza.group(0)
+    months = (
+        "January|February|March|April|May|June|July|August|"
+        "September|October|November|December"
+    )
+    pattern = re.compile(
+        rf"(?im)^#\s*\d+\s+"
+        rf"(?:(?:MR|MS|MRS|DR|MISS|REV)\.?\s+)?"
+        rf"([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){{1,3}}?)"
+        rf"(?=\s*(?:\(|{months}\b|Appt\b|Re-?appt\b|$))"
+        rf"(?:\s*\([^)]*\))?"
+        rf"(?:\s+(?:{months})\s+\d{{1,2}},\s*((?:19|20)\d{{2}}))?",
+    )
+    for m in pattern.finditer(scope):
+        raw = m.group(1).strip()
+        if re.search(r"(?i)^(replacing|appt|re-?appt|december|january)\b", raw):
+            continue
+        name = _title_case_name(raw)
+        if not _is_person(name):
+            continue
+        term_end = m.group(2)
+        block_start = m.start()
+        # Berkeley sometimes prints the expiry on the line *before* "# N".
+        if not term_end:
+            prev = scope[max(0, block_start - 80) : block_start]
+            ym = re.search(rf"(?i)(?:{months})\s+\d{{1,2}},\s*((?:19|20)\d{{2}})", prev)
+            if ym:
+                term_end = ym.group(1)
+        if not term_end:
+            tail = scope[m.end() : m.end() + 120]
+            ym = re.search(rf"(?i)(?:{months})\s+\d{{1,2}},\s*((?:19|20)\d{{2}})", tail)
+            term_end = ym.group(1) if ym else None
+        block_end = m.end() + 220
+        nxt = re.search(r"(?m)^#\s*\d+\s+", scope[m.end() :])
+        if nxt:
+            block_end = min(block_end, m.end() + nxt.start())
+        block = scope[block_start:block_end]
+        years = _years_from_dates(block)
+        appt_ys = []
+        for am in re.finditer(
+            r"(?i)(?:re-?appt|appt)\s+by[^\n]*?(\d{1,2}/\d{1,2}/\d{2,4})",
+            block,
+        ):
+            appt_ys.extend(_years_from_dates(am.group(1)))
+        if appt_ys:
+            term_start = str(min(appt_ys))
+        elif years:
+            start_candidates = [y for y in years if term_end is None or y != int(term_end)]
+            term_start = str(min(start_candidates or years))
+        else:
+            term_start = None
+        tenure = re.sub(r"\s+", " ", scope[m.start() : m.end() + 80])[:200]
+        out.append(_member(county, name, _status_for(term_end), term_start, term_end, tenure))
+    return out
+
+
 def _bza_scoped_text(text):
     """Prefer the Board of Zoning Appeals section on multi-board pages."""
     if not text:
@@ -827,10 +925,7 @@ def parse_current_members(html, county):
     # PDF bytes sometimes sneak through as latin1 text from known URL overrides.
     if html.lstrip().startswith("%PDF") or "\x00" in html[:200]:
         return members
-    try:
-        soup = BeautifulSoup(html, "html.parser")
-    except Exception:
-        return members
+    soup = _soup(html)
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
 
@@ -844,6 +939,7 @@ def parse_current_members(html, county):
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
+    members.extend(_parse_numbered_membership_roster(text, county))
 
     # 3. Plan heuristic: list items with a name and a Term/Appointed/Expires cue.
     for lst in soup.find_all(["ul", "ol"]):
@@ -866,7 +962,7 @@ def parse_current_members(html, county):
 
 def _member_subpages(boza_url, boza_html):
     """Collect roster/minutes/agenda links from the BOZA page."""
-    soup = BeautifulSoup(boza_html, "html.parser")
+    soup = _soup(boza_html)
     targets, seen = [], set()
     for a in soup.find_all("a", href=True):
         text = (a.get_text(" ", strip=True) or "").lower()
@@ -1080,7 +1176,7 @@ def _drupal_year_options(html):
     """Years listed in a Drupal BOZA meeting-date year filter select."""
     if not html or DRUPAL_YEAR_PARAM not in html:
         return []
-    soup = BeautifulSoup(html, "html.parser")
+    soup = _soup(html)
     years = []
     for sel in soup.find_all("select"):
         name = (sel.get("name") or sel.get("id") or "").lower()
@@ -1105,7 +1201,7 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
     docs = []
     if not html:
         return docs
-    soup = BeautifulSoup(html, "html.parser")
+    soup = _soup(html)
     for a in soup.find_all("a", href=True):
         full = urljoin(base, a["href"])
         link_text = a.get_text(" ", strip=True) or ""
@@ -1166,7 +1262,7 @@ async def _listing_pages(base, boza_url, boza_html):
     for src_url, html in [(boza_url, boza_html), (base, home_html)]:
         if not html:
             continue
-        soup = BeautifulSoup(html, "html.parser")
+        soup = _soup(html)
         for a in soup.find_all("a", href=True):
             blob = ((a.get_text(" ", strip=True) or "") + " " + a["href"]).lower()
             if any(hint in blob for hint in AGENDA_HINTS):
@@ -1289,10 +1385,27 @@ async def fetch_document(url):
         if pdfplumber is not None:
             try:
                 parts = []
+                bza_parts = []
                 with pdfplumber.open(io.BytesIO(data)) as pdf:
-                    for page in pdf.pages[:8]:
-                        parts.append(page.extract_text() or "")
+                    # Minutes usually sit in the first pages; county-wide board
+                    # master lists bury BZA later — scan further for those.
+                    page_cap = min(len(pdf.pages), 50)
+                    for i in range(page_cap):
+                        page_text = pdf.pages[i].extract_text() or ""
+                        if i < 8:
+                            parts.append(page_text)
+                        if re.search(
+                            r"(?i)board of zoning|zoning board of (?:appeals|adjustment)|"
+                            r"zoning appeals board|\bbza\b",
+                            page_text,
+                        ):
+                            bza_parts.append(page_text)
+                            if i + 1 < page_cap:
+                                bza_parts.append(pdf.pages[i + 1].extract_text() or "")
                 text = "\n".join(parts)
+                if bza_parts:
+                    # Prefer BZA pages when present (avoids truncating master lists).
+                    text = text + "\n" + "\n".join(bza_parts)
             except Exception:
                 text = None
         # Image-only / scanned minutes: OCR a couple pages under a hard timeout.
@@ -1313,7 +1426,7 @@ async def fetch_document(url):
         return text
     try:
         html = data.decode("utf-8", "ignore")
-        return BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+        return _soup(html).get_text(" ", strip=True)
     except Exception:
         return None
 
@@ -1539,8 +1652,11 @@ def parse_roster_from_text(text, county):
     """Apply text-roster parsers to plain document text (HTML-stripped or PDF)."""
     if not text:
         return []
-    text = _bza_scoped_text(text)
+    # Numbered membership lists need the full multi-board PDF (Berkeley), so
+    # run that parser before BZA-scoping truncates surrounding boards.
     members = []
+    members.extend(_parse_numbered_membership_roster(text, county))
+    text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))

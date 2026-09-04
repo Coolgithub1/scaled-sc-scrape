@@ -86,6 +86,8 @@ KNOWN_BOZA_URLS = {
         "http://www.hamptoncountysc.org/316/Boards-Commissions",
     ],
     "Horry": [
+        # Powers/duties page has no roster; members live on boards & commissions.
+        "https://www.horrycountysc.gov/boards-and-commissions/zoning-board-of-appeals/",
         "https://www.horrycountysc.gov/departments/planning-and-zoning/board-of-zoning-appeals/",
     ],
     "Jasper": [
