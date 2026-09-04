@@ -12,4 +12,4 @@ For leftover ranks 61–100:
 - `send_ok=yes` means a published company or local-ops inbox (not press/IR)
 - `send_ok=no` means the firm only publishes press/IR or a web form. Do not email those.
 
-Do not send mail from this list unless asked.
+`remaining_drafts.md` has the 30 leftover sendable emails ready to copy. They are also sitting as unsent Gmail drafts. Do not send mail from this list unless asked.

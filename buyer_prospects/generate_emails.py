@@ -226,16 +226,39 @@ def build(row: dict, i: int) -> dict:
     why = why_line(segment, i)
     cta = CTAS[i % len(CTAS)]
     sig = SIGS[i % len(SIGS)]
-    first = company.split()[0].replace(",", "")
+    short = {
+        "The Beach Company": "The Beach Company",
+        "Home Builders Association of South Carolina": "HBA of SC",
+        "Urban Land Institute": "ULI",
+        "Great Southern Homes": "Great Southern",
+        "South Carolina Department of Commerce": "SC Commerce",
+        "Myrtle Beach Regional EDC": "Myrtle Beach EDC",
+        "National Association of Home Builders": "NAHB",
+        "Charleston Regional Development Alliance": "CRDA",
+        "Central SC Alliance": "Central SC Alliance",
+        "Upstate SC Alliance": "Upstate Alliance",
+        "American Planning Association": "APA",
+        "D.R. Horton": "D.R. Horton",
+        "Childress Klein": "Childress Klein",
+        "NAI Earle Furman": "NAI Earle Furman",
+        "Avison Young": "Avison Young",
+        "Investors Title": "Investors Title",
+        "Moody's CRE": "Moody's CRE",
+        "Crescent Communities": "Crescent",
+        "Quest Site Solutions": "Quest",
+        "ALN Apartment Data": "ALN",
+        "Stewart Title": "Stewart",
+        "Mungo Homes": "Mungo",
+    }.get(company, company.split()[0].replace(",", ""))
     subject_bank = [
-        f"{first}: SC zoning appeals board members",
-        f"county BZA roster that may fit {first}",
-        f"sitting and historic zoning board names ({first})",
-        f"quick note for {first} on county BZA data",
-        f"{first} / who sits on the SC appeals board",
-        f"South Carolina BOZA members, note for {first}",
-        f"{first} and a US county BZA corpus",
-        f"structured zoning-board members for {first}",
+        f"{short}: SC zoning appeals board members",
+        f"county BZA roster that may fit {short}",
+        f"sitting and historic zoning board names ({short})",
+        f"quick note for {short} on county BZA data",
+        f"{short} / who sits on the SC appeals board",
+        f"South Carolina BOZA members, note for {short}",
+        f"{short} and a US county BZA corpus",
+        f"structured zoning-board members for {short}",
     ]
     subject = subject_bank[i % len(subject_bank)]
 
