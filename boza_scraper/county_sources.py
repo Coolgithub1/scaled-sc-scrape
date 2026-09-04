@@ -57,6 +57,10 @@ KNOWN_BOZA_URLS = {
         # MatchBoard hosts sitting ZBA members (entity 14 / board 363).
         "https://api.matchboard.tech/app/boards/363",
     ],
+    "Colleton": [
+        # MatchBoard Land Use Zoning Board of Appeal (entity 15 / board 341).
+        "https://api.matchboard.tech/app/boards/341",
+    ],
     "Darlington": [
         "https://www.darcosc.com/government/boards_commissions/index.php",
         # MatchBoard sitting BZA members (entity 101 / board 351).
@@ -178,6 +182,9 @@ KNOWN_BOZA_URLS = {
     ],
     "Sumter": [
         "https://www.sumtersc.gov/planning/board-zoning-appeals",
+    ],
+    "Spartanburg": [
+        "https://www.spartanburgcounty.gov/371/Board-of-Zoning-Appeals",
     ],
     "Union": [
         "https://gearupunionsc.com/departments/building-maintenance/",

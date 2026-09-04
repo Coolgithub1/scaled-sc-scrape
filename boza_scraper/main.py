@@ -681,7 +681,16 @@ def _is_person(name):
         return False
     alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
     if len(alpha) < 2:
-        return False
+        # Allow apostrophe names: La'Jessica -> lajessica after strip.
+        alpha_ap = [
+            re.sub(r"['\u2019]", "", t)
+            for t in tokens
+            if len(re.sub(r"['\u2019]", "", t)) >= 2
+            and re.sub(r"['\u2019]", "", t).isalpha()
+        ]
+        if len(alpha_ap) < 2:
+            return False
+        alpha = alpha_ap
     # Reject merged multi-person blobs ("Mike Watson Christopher Pullen").
     if len(alpha) >= 4 and not re.search(r"(?i)\b(jr|sr|ii|iii|iv)\b", name):
         # Allow 4-token names with middle initials only.
@@ -689,7 +698,11 @@ def _is_person(name):
             return False
     # Require mostly capitalized person-name tokens (reject sentence fragments).
     raw_tokens = [t.strip(".,'") for t in name.replace("(", " ").replace(")", " ").split()]
-    named = [t for t in raw_tokens if t.isalpha() and len(t) >= 2]
+    named = []
+    for t in raw_tokens:
+        core = re.sub(r"['\u2019]", "", t)
+        if core.isalpha() and len(core) >= 2:
+            named.append(t)
     if not named:
         return False
     caps = sum(1 for t in named if t[0].isupper())
@@ -707,29 +720,51 @@ def _extract_name(text):
 def _clean_name(raw):
     """Extract a person name from a roster cell that may include an address/phone."""
     raw = re.sub(r"(?i)^(mr|ms|mrs|miss|dr|rev)\.?\s+", "", raw.strip())
+    # Strip CivicPlus seat-type labels (Lancaster), even mid-string before dates.
+    raw = re.sub(
+        r"(?i)\s*development[-\s]?related\s+professional\b",
+        " ",
+        raw,
+    )
+    raw = re.sub(
+        r"(?i)\s*at[-\s]?large\s+member(?:\s*\([^)]*\))?",
+        " ",
+        raw,
+    )
+    raw = re.sub(r"(?i)\s*vice[-\s]?chairman\b", " ", raw)
     raw = re.sub(r"District\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"At[-\s]?Large", " ", raw, flags=re.IGNORECASE)
     raw = re.sub(r"Seat\s*#?\s*\d+", " ", raw, flags=re.IGNORECASE)
     # Strip trailing role labels glued onto names.
     raw = re.sub(
-        r"(?i)\s*(?:vice[-\s]?chair(?:man|woman|person)?|chair(?:man|woman|person)?|"
+        r"(?i)\s*[,\-]?\s*(?:vice[-\s]?chair(?:man|woman|person)?|chair(?:man|woman|person)?|"
         r"secretary|councilmember|council\s*member)\s*$",
         " ",
         raw,
     )
     # Leftover hyphenated role stubs ("Tom Audette Vice-").
     raw = re.sub(r"(?i)\s*vice-?\s*$", " ", raw)
-    # Keep quoted nicknames as plain tokens ("Ray" -> Ray) so minutes aliases match.
-    raw = re.sub(r"[\"\u201c\u201d\u2018\u2019']", " ", raw)
+    # Unwrap quoted nicknames only; keep mid-name apostrophes (La'Jessica).
+    raw = re.sub(r'[\"\u201c\u201d]([^\"\u201c\u201d]+)[\"\u201c\u201d]', r"\1", raw)
+    raw = re.sub(r"[\u2018\u2019]([A-Za-z]+)[\u2018\u2019]", r"\1", raw)
+    # Drop trailing calendar dates before digit-split ("June 30, 2028").
+    raw = re.sub(
+        r"(?i)\s+(?:January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+\d{1,2},?\s*(?:(?:19|20)\d{2})?.*$",
+        " ",
+        raw,
+    )
     # An address/phone starts with a digit; cut the cell there.
     raw = re.split(r"\d", raw, 1)[0]
-    tokens = re.findall(r"[A-Z][a-zA-Z.'\-]*", raw)
-    # Drop role tokens that survived as capitalized words.
+    tokens = re.findall(r"[A-Z][a-zA-Z.'\u2019\-]*", raw)
+    # Drop role tokens / leftover month words.
     tokens = [
         t for t in tokens
         if t.lower().rstrip(".") not in {
             "vice", "chair", "chairman", "chairwoman", "chairperson",
             "secretary", "councilmember", "member",
+            "january", "february", "march", "april", "may", "june", "july",
+            "august", "september", "october", "november", "december",
         }
     ]
     if len(tokens) < 2:
@@ -973,17 +1008,17 @@ def _parse_district_roster_text(text, county):
         start_m = re.search(r"(?i)(?<!re)appointment\s*:?\s*.*?\b((?:19|20)\d{2})\b", meta)
         term_start = start_m.group(1) if start_m else (str(min(years)) if years else None)
         out.append(_member(county, name, _status_for(term_end), term_start, term_end, (raw_name + " " + meta)[:200]))
-    # Calhoun BZA: Name (role) then District N with no dates.
+    # Calhoun/Oconee BZA: Name then District N / At-Large with no dates.
     if not out:
         for m in re.finditer(
             r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3})(?:\s*\([^)]+\))?\s*\n+"
             r"(?:(?:Vice[-\s]?Chair(?:man|woman)?|Chairman|Chairwoman|Chairperson|Chair|"
             r"Councilmember|Council\s*Member)\s*\n+)?"
-            r"District\s*\d+\s*$",
+            r"(?:District\s*\d+|At[-\s]?Large)\s*$",
             scope,
         ):
             raw = re.sub(r"\s*\([^)]*\)\s*", " ", m.group(1)).strip()
-            if re.search(r"(?i)zoning|district|board|appeals|council|vice|chair", raw):
+            if re.search(r"(?i)zoning|district|board|appeals|council|vice|chair|staff|liaison", raw):
                 continue
             # Skip county-council directory widgets embedded on BZA pages (York).
             block = m.group(0)
@@ -992,6 +1027,90 @@ def _parse_district_roster_text(text, county):
             name = _clean_name(raw) or _title_case_name(raw)
             if name and _is_person(name):
                 out.append(_member(county, name, "sitting", None, None, m.group(0)[:200]))
+    return out
+
+
+def _parse_abbeville_board_table(text, county):
+    """Abbeville Boards & Commissions: Member / Position / Term rows under BZA."""
+    out = []
+    m = re.search(
+        r"(?is)board of zoning appeals\b(.*?)(?=\bplanning commission\b|"
+        r"\btitle iii\b|\baccommodations tax\b|$)",
+        text,
+    )
+    if not m:
+        return out
+    scope = m.group(1)
+    # Name / District N / MM/YYYY-MM/YYYY  (or Vacant / District / 4 Year Term)
+    for row in re.finditer(
+        r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3}|Vacant)\s*\n+"
+        r"(District\s*\d+|At[-\s]?Large|Non-?Elected|Elected)\s*\n+"
+        r"([^\n]+)$",
+        scope,
+    ):
+        raw = row.group(1).strip()
+        if re.search(r"(?i)^\s*vacant\s*$", raw):
+            continue
+        name = _clean_name(raw) or (
+            _title_case_name(raw) if _is_person(_title_case_name(raw)) else None
+        )
+        if not name or not _is_person(name):
+            continue
+        meta = row.group(3)
+        years = _years_from_dates(meta)
+        term_start = str(min(years)) if years else None
+        term_end = str(max(years)) if years else None
+        out.append(
+            _member(
+                county,
+                name,
+                _status_for(term_end),
+                term_start,
+                term_end,
+                f"{raw} {row.group(2)} {meta}"[:200],
+            )
+        )
+    return out
+
+
+def _parse_lancaster_members_block(text, county):
+    """Lancaster CivicPlus: Members / Name / seat type / Month DD, YYYY."""
+    out = []
+    m = re.search(
+        r"(?is)\bmembers\b\s*\n(.*?)(?=\ncitizen|\bagendas?\b|\bcontact us\b|\bpay taxes\b|$)",
+        text,
+    )
+    if not m:
+        return out
+    block = m.group(1)
+    # Require at least one seat-type cue so we don't scrape random Members nav.
+    if not re.search(r"(?i)development[-\s]?related|at[-\s]?large member", block):
+        return out
+    for row in re.finditer(
+        r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3})\s*\n+"
+        r"([^\n]+)\s*\n+"
+        r"((?:January|February|March|April|May|June|July|August|September|"
+        r"October|November|December)\s+\d{1,2},\s*(?:19|20)\d{2})\s*$",
+        block,
+    ):
+        raw = row.group(1).strip()
+        name = _clean_name(raw) or (
+            _title_case_name(raw) if _is_person(_title_case_name(raw)) else None
+        )
+        if not name or not _is_person(name):
+            continue
+        years = _years_from_dates(row.group(3))
+        term_end = str(max(years)) if years else None
+        out.append(
+            _member(
+                county,
+                name,
+                _status_for(term_end),
+                None,
+                term_end,
+                f"{raw}; {row.group(2)}; {row.group(3)}"[:200],
+            )
+        )
     return out
 
 
@@ -1141,12 +1260,29 @@ def _bza_scoped_text(text):
     )
     if members_block and len(members_block.group(1)) > 80:
         return members_block.group(1)
+    # Richland-style "Current Members" under a BZA page title.
+    current = re.search(
+        r"(?is)((?:board of zoning appeals|zoning board of appeals).{0,400}?"
+        r"current members?\b.*?)(?=\bcontact\b|\bshare\b|\bformer members?\b|$)",
+        text,
+    )
+    if current and len(current.group(1)) > 80:
+        return current.group(1)
+    # Abbeville multi-board page: BZA block ends at the next named board.
+    abbeville = re.search(
+        r"(?is)(board of zoning appeals\b.*?)(?=\bplanning commission\b|"
+        r"\btitle iii\b|\baccommodations tax\b|\bboard of assessment\b|$)",
+        text,
+    )
+    if abbeville and re.search(r"(?i)\b(?:member|district|vacant)\b", abbeville.group(1)):
+        return abbeville.group(1)
     matches = list(re.finditer(
         r"(?is)((?:board of zoning appeals|zoning board of appeals|"
         r"zoning board of adjustment|board of adjustment(?:s)? and appeals|"
         r"zoning appeals board|board of zoning appeal)\b.*?)"
         r"(?=\n(?:[A-Z][^\n]{0,40}\n)?(?:board of|commission|committee|authority|council)\b|"
-        r"\n[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+Board\b|$)",
+        r"\n[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+Board\b|"
+        r"\nPlanning Commission\b|$)",
         text,
     ))
     if not matches:
@@ -1157,8 +1293,11 @@ def _bza_scoped_text(text):
         score = len(block)
         if re.search(r"(?i)\bmembers?\b", block):
             score += 5000
-        if re.search(r"(?i)\b(?:chair|appointed|term)\b", block):
+        if re.search(r"(?i)\b(?:chair|appointed|term|district)\b", block):
             score += 1000
+        # Penalize huge multi-board dumps.
+        if re.search(r"(?i)\bplanning commission\b", block):
+            score -= 3000
         return score
     best = max(matches, key=_score)
     if len(best.group(1)) > 80:
@@ -1289,6 +1428,32 @@ def _parse_card_title_roster(soup, county):
     return out
 
 
+def _table_under_bza_heading(table):
+    """True when the nearest prior board-like heading is the ZBA/BZA."""
+    for prev in table.find_all_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p", "strong"]):
+        title = prev.get_text(" ", strip=True)
+        if not title or len(title) > 100:
+            continue
+        # Ignore metadata lines under each board.
+        if re.search(
+            r"(?i)^(term of office|authority|membership|responsibilities|"
+            r"meeting schedule|staff liaison|member|position|term)\b",
+            title,
+        ):
+            continue
+        if re.search(
+            r"(?i)board of zoning appeals|zoning board of appeals|zoning appeals board",
+            title,
+        ):
+            return True
+        if re.search(
+            r"(?i)\b(?:commission|committee|board|authority|task force)\b", title
+        ):
+            return False
+    # No clear heading — allow (single-board pages).
+    return True
+
+
 def parse_current_members(html, county):
     members = []
     if not html:
@@ -1301,7 +1466,13 @@ def parse_current_members(html, county):
         tag.decompose()
 
     # 1. Header-mapped roster tables (handles CivicPlus-style member tables).
+    # On multi-board pages (Abbeville), only keep tables under a BZA heading.
+    multi_board = len(re.findall(
+        r"(?i)term of office", soup.get_text(" ", strip=True)
+    )) >= 2
     for table in soup.find_all("table"):
+        if multi_board and not _table_under_bza_heading(table):
+            continue
         members.extend(_parse_table(table, county))
 
     # 1b. Card-title rosters (Anderson County).
@@ -1314,7 +1485,10 @@ def parse_current_members(html, county):
 
     # 2. Structured text rosters.
     members.extend(_parse_current_members_block(text, county))
+    members.extend(_parse_current_members_block(full_text, county))
     members.extend(_parse_district_roster_text(text, county))
+    members.extend(_parse_abbeville_board_table(full_text, county))
+    members.extend(_parse_lancaster_members_block(full_text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
     members.extend(_parse_numbered_membership_roster(text, county))
     members.extend(_parse_bza_members_lines(full_text, county))
