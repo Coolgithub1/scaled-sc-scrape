@@ -8,11 +8,11 @@ Rule: one boilerplate, slight per-company edit, wait for approval, then send fro
 
 Keep the first email under ~100 words. One job: get a reply, not close a license.
 
-Lead with what exists (SC sitting + historic BZA members). One sentence on the nationwide county corpus. One sentence on why it fits *them*. Offer a sample. Soft CTA.
+Lead with what exists (SC sitting + historic BZA members). One sentence on the nationwide county corpus. One sentence on why it fits *them*. End on a hard CTA: reply SAMPLE / yes, and the sample goes out today.
 
 Do not put row counts, county gaps, CSV columns, or pricing in email 1. Save that for the reply.
 
-Framework: QVC (question/relevance, one value line, one ask). Intro is included because the sender is unknown.
+Framework: QVC (question/relevance, one value line, one ask). Intro is included because the sender is unknown. The ask has to be a verb they can do in one reply.
 
 ## Boilerplate
 
@@ -24,9 +24,7 @@ My name is Adam Natsheh. I'm a data scientist and AI/ML researcher.
 
 I put together a structured directory of South Carolina county Board of Zoning Appeals members, sitting and historic. I'm now expanding that to every county in the US.
 
-If a clean BZA/BOZA member corpus would be useful, I can send a short sample.
-
-If this isn't relevant, reply stop and I won't follow up.
+Reply SAMPLE and I'll send a short SC excerpt today.
 
 Adam Natsheh
 Data Scientist and AI/ML Researcher
@@ -55,7 +53,7 @@ I built a structured directory of South Carolina county Board of Zoning Appeals 
 
 You already turn zoning codes into data. This is the missing layer: who actually sits on the appeals board.
 
-If that's useful, I can send a short sample. If not, reply stop and I won't follow up.
+Reply SAMPLE and I'll send a short SC excerpt today.
 
 Adam Natsheh
 Data Scientist and AI/ML Researcher

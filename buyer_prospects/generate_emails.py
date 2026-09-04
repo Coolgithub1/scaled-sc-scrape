@@ -174,14 +174,14 @@ WHY = {
 }
 
 CTAS = [
-    "If that's useful, I can send a short sample.",
-    "Happy to send a small sample if you want to see the fields.",
-    "I can share a brief sample if you'd like to look.",
-    "Would a short sample be worth a look?",
-    "If you want, I'll send a sample and leave it there.",
-    "I can walk through a sample on a short call, or just email it.",
-    "Let me know if a sample would help.",
-    "If this is interesting, I'll send a sample rather than a long pitch.",
+    "Reply SAMPLE and I'll send a short SC excerpt today.",
+    "Reply yes and I'll email a 5-county sample this afternoon.",
+    "One reply and I'll send a sample today. That's the whole ask.",
+    "Can I send a sample today? Reply and I will.",
+    "Reply with yes and I'll send the sample before I close out.",
+    "Tell me where to send a sample and I'll get it over today.",
+    "Reply and I'll send a sample today so you can see the fields.",
+    "Want the sample? Reply now and I'll send it today.",
 ]
 
 SIGS = [
