@@ -637,22 +637,39 @@ def _parse_table(table, county):
         return out
     header = [c.get_text(" ", strip=True).lower() for c in rows[0].find_all(["th", "td"])]
 
-    def find_col(keys):
+    def find_col(keys, exact=False):
         for i, h in enumerate(header):
-            if any(k in h for k in keys):
+            h_norm = h.strip()
+            if exact:
+                if h_norm in keys:
+                    return i
+            elif any(k in h_norm for k in keys):
                 return i
         return None
 
+    # York-style: First Name | Last Name | Term Start | Term End
+    first_i = find_col(["first name", "firstname"], exact=True) or find_col(["first name"])
+    last_i = find_col(["last name", "lastname"], exact=True) or find_col(["last name"])
     name_i = find_col([
-        "zoning board member", "board member", "member name", "name",
+        "zoning board member", "board member", "member name", "full name",
         "appointee", "commissioner",
     ])
-    # Do NOT treat bare "district" as a name column (Calhoun "Zoning District").
+    # Prefer a dedicated name column; avoid matching "first name"/"last name" as "name".
     if name_i is None:
+        for i, h in enumerate(header):
+            if h.strip() in ("name", "member", "members"):
+                name_i = i
+                break
+    if name_i is None and not (first_i is not None and last_i is not None):
         name_i = find_col(["member"])
-    appt_i = find_col(["first appointed", "appointed", "appointment", "since", "start", "term served"])
-    exp_i = find_col(["expires", "expiration", "term end", "term expires", "appointment ends"])
-    has_headers = any(v is not None for v in (name_i, appt_i, exp_i))
+    appt_i = find_col([
+        "first appointed", "appointed", "appointment", "since", "term start",
+        "start", "term served",
+    ])
+    exp_i = find_col([
+        "expires", "expiration", "term end", "term expires", "appointment ends",
+    ])
+    has_headers = any(v is not None for v in (name_i, appt_i, exp_i, first_i, last_i))
     body = rows[1:] if any(header) else rows
 
     for tr in body:
@@ -665,7 +682,10 @@ def _parse_table(table, county):
             continue
         if rowtext.strip().lower() in ("vacant",):
             continue
-        name_src = cells[name_i] if (name_i is not None and name_i < len(cells)) else rowtext
+        if first_i is not None and last_i is not None and first_i < len(cells) and last_i < len(cells):
+            name_src = f"{cells[first_i]} {cells[last_i]}".strip()
+        else:
+            name_src = cells[name_i] if (name_i is not None and name_i < len(cells)) else rowtext
         if re.search(r"(?i)^\s*vacant\s*$", name_src or ""):
             continue
         name = _clean_name(name_src)
@@ -704,7 +724,10 @@ def _parse_table(table, county):
 
         # Accept a row only when it carries a real temporal signal or the table
         # is clearly a roster (name column plus appointment/expiration column).
-        roster_table = name_i is not None and (appt_i is not None or exp_i is not None)
+        roster_table = (
+            (name_i is not None or (first_i is not None and last_i is not None))
+            and (appt_i is not None or exp_i is not None)
+        )
         # Name | District N tables on BZA pages (Calhoun) — accept as sitting.
         district_pair = (
             len(cells) >= 2
@@ -909,17 +932,76 @@ def _bza_scoped_text(text):
     """Prefer the Board of Zoning Appeals section on multi-board pages."""
     if not text:
         return text
-    m = re.search(
+    # Prefer an explicit "… Appeals Members" roster block when present
+    # (Greenwood lists BZA early in nav copy, then the real roster later).
+    members_block = re.search(
+        r"(?is)((?:board of zoning appeals|zoning board of appeals|"
+        r"zoning appeals board)\s+members?\b.*?)(?="
+        r"\n(?:contact us|privacy policy|planning commission members|"
+        r"board of architectural|county council)\b|$)",
+        text,
+    )
+    if members_block and len(members_block.group(1)) > 80:
+        return members_block.group(1)
+    matches = list(re.finditer(
         r"(?is)((?:board of zoning appeals|zoning board of appeals|"
         r"zoning board of adjustment|board of adjustment(?:s)? and appeals|"
         r"zoning appeals board|board of zoning appeal)\b.*?)"
         r"(?=\n(?:[A-Z][^\n]{0,40}\n)?(?:board of|commission|committee|authority|council)\b|"
         r"\n[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+Board\b|$)",
         text,
-    )
-    if m and len(m.group(1)) > 80:
-        return m.group(1)
+    ))
+    if not matches:
+        return text
+    # Prefer the longest match that looks like a roster (has person-like lines).
+    def _score(m):
+        block = m.group(1)
+        score = len(block)
+        if re.search(r"(?i)\bmembers?\b", block):
+            score += 5000
+        if re.search(r"(?i)\b(?:chair|appointed|term)\b", block):
+            score += 1000
+        return score
+    best = max(matches, key=_score)
+    if len(best.group(1)) > 80:
+        return best.group(1)
     return text
+
+
+def _parse_bza_members_lines(text, county):
+    """Greenwood-style: 'Board of Zoning Appeals Members' then one name per line."""
+    out = []
+    m = re.search(
+        r"(?is)(?:board of zoning appeals|zoning board of appeals)\s+members?\b"
+        r"(.*?)(?=\n(?:contact us|privacy policy|planning commission|board of architectural|"
+        r"county council)\b|$)",
+        text,
+    )
+    if not m:
+        return out
+    block = m.group(1)
+    skip = re.compile(
+        r"(?i)^(appointed by|member|term|term of office|authority|membership|"
+        r"responsibilities|meeting schedule|staff liaison|agendas?\s+and\s+minutes|"
+        r"greenwood city|board of zoning|vacant|\u200b|$)",
+    )
+    for raw in block.splitlines():
+        line = raw.strip().strip("\u200b").strip()
+        if not line or skip.match(line):
+            continue
+        if re.search(r"(?i)^\d+\s*years|appointed by council|first monday", line):
+            continue
+        if ":" in line and len(line.split()) <= 6:
+            # "Term of Office : 3 years" style metadata
+            continue
+        cleaned = re.sub(r"\s*\([^)]*(?:chair|vice)[^)]*\)\s*", " ", line, flags=re.I)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t-–—,:;")
+        name = _clean_name(cleaned) or (
+            _title_case_name(cleaned) if _is_person(_title_case_name(cleaned)) else None
+        )
+        if name and _is_person(name):
+            out.append(_member(county, name, "sitting", None, None, line[:200]))
+    return out
 
 
 def parse_current_members(html, county):
@@ -937,13 +1019,16 @@ def parse_current_members(html, county):
     for table in soup.find_all("table"):
         members.extend(_parse_table(table, county))
 
-    text = _bza_scoped_text(soup.get_text("\n", strip=True))
+    full_text = soup.get_text("\n", strip=True)
+    text = _bza_scoped_text(full_text)
 
     # 2. Structured text rosters.
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
     members.extend(_parse_numbered_membership_roster(text, county))
+    members.extend(_parse_bza_members_lines(full_text, county))
+    members.extend(_parse_bza_members_lines(text, county))
 
     # 3. Plan heuristic: list items with a name and a Term/Appointed/Expires cue.
     for lst in soup.find_all(["ul", "ol"]):
@@ -1163,10 +1248,26 @@ def _civicplus_bza_categories(html):
         cat_id, label = m.group(1), m.group(2).strip().lower()
         if "zoning" in label and "appeal" in label:
             cats.append(cat_id)
+        elif (
+            "board of appeals" in label
+            and not any(x in label for x in ("assessment", "building", "stormwater", "tax"))
+        ):
+            cats.append(cat_id)
+        # Aiken publishes BZA under Planning and Development.
+        elif "planning" in label and "development" in label and re.search(
+            r"(?i)board of appeals", html
+        ):
+            cats.append(cat_id)
     # Fallback: section headers / changeYear near BZA wording.
     if not cats:
         for m in re.finditer(
             r'(?is)board of zoning appeals.{0,400}?changeYear\(\d+,\s*(\d+)',
+            html,
+        ):
+            cats.append(m.group(1))
+    if not cats:
+        for m in re.finditer(
+            r'(?is)board of appeals.{0,400}?changeYear\(\d+,\s*(\d+)',
             html,
         ):
             cats.append(m.group(1))
@@ -1256,6 +1357,11 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
             ):
                 continue
         blob = f"{full} {link_text}".lower()
+        # Umbrella Planning categories mix BZA with Planning Commission packets.
+        if "planning commission" in blob and "appeal" not in blob:
+            continue
+        if re.search(r"\bacpc\b", blob) and "appeal" not in blob:
+            continue
         on_bza_path = "zoning" in full.lower() and (
             "appeal" in full.lower() or "board_of_appeals" in full.lower()
         )
@@ -1264,9 +1370,31 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
             or re.search(r"\bbza\b", blob) is not None
             or "board of zoning" in blob
             or "land management board of appeals" in blob
+            or (
+                "board of appeals" in blob
+                and not any(
+                    x in blob
+                    for x in (
+                        "assessment", "building", "stormwater", "tax ",
+                        "construction", "board of voter",
+                    )
+                )
+            )
         )
         if not (assume_bza or on_bza_path or labeled_bza):
             continue
+        # Even on assume_bza umbrella pages, require a BZA cue when the link
+        # clearly belongs to another board.
+        if assume_bza and not (on_bza_path or labeled_bza):
+            if any(
+                x in blob
+                for x in (
+                    "historical commission", "recreation commission",
+                    "transportation", "legislative delegation",
+                    "county council", "voter registration",
+                )
+            ):
+                continue
         year = _doc_year(full, link_text)
         seen.add(full)
         docs.append({
@@ -1555,14 +1683,60 @@ def _attendance_header(text):
     """Return the Members Present/Absent header, excluding staff lists."""
     if not text:
         return ""
+    # Prefer the attendance block wherever it sits. Some counties (Aiken) put
+    # CALL TO ORDER before the Members Present list, so a start-of-doc cut loses it.
+    m = re.search(
+        r"(?is)(?:members?\s+present|members?\s+absent|"
+        r"(?:^|\n)\s*present\s*:|commission(?:ers?)?\s+present|"
+        r"board members?\s*[–—:-]|MEMBERS\s+PRESENT)",
+        text,
+    )
+    if m:
+        window = text[m.start() : m.start() + 3000]
+        cut = re.search(
+            r"(?i)\b(also\s+present|staff\s+present|staff\s*:|"
+            r"recognition of visitors|approval of (?:the\s+)?minutes|"
+            r"new business|old business|adjournment)\b",
+            window,
+        )
+        head = window[: cut.start()] if cut else window
+        return _fix_ocr_name_gaps(head)
     # Prefer cutting at Staff Present; else at call-to-order / first motion.
     cut = _ATTENDANCE_STOP.search(text)
-    head = text[:cut.start()] if cut else text[:2500]
+    head = text[: cut.start()] if cut else text[:2500]
     return _fix_ocr_name_gaps(head)
 
 
 def _parse_attendance_names(section):
     """Pull person names out of a Present/Absent section body."""
+    if not section:
+        return []
+    # Aiken-style: one member per line with optional "– Chairman" role suffix.
+    lines = [ln.strip() for ln in section.splitlines() if ln.strip()]
+    if len(lines) >= 2 and section.count(",") <= 1:
+        names = []
+        for ln in lines:
+            ln = re.sub(
+                r"\s*[–—-]\s*(?:Vice[-\s]?Chairman|Vice[-\s]?Chair|"
+                r"Chairman|Chairwoman|Chairperson|Chair)\s*$",
+                "",
+                ln,
+                flags=re.I,
+            )
+            names.extend(_parse_attendance_names_flat(ln))
+        seen, out = set(), []
+        for n in names:
+            key = _norm_name_key(n)
+            if key and key not in seen:
+                seen.add(key)
+                out.append(n)
+        if out:
+            return out
+    return _parse_attendance_names_flat(section)
+
+
+def _parse_attendance_names_flat(section):
+    """Pull person names from a comma/and-delimited attendance fragment."""
     names = []
     if not section:
         return names
@@ -1723,10 +1897,11 @@ def parse_minutes_attendance(text):
         return []
 
     # Normalize label variants onto their own lines for simpler splitting.
-    norm = re.sub(r"(?i)\bmembers?\s*present\s*:\s*", "\nMEMBERS_PRESENT:\n", head)
+    # Colon is optional (Aiken: "Members Present" without ":").
+    norm = re.sub(r"(?i)\bmembers?\s*present\s*:?\s*", "\nMEMBERS_PRESENT:\n", head)
     norm = re.sub(r"(?i)\bcommission(?:ers?)?\s+present\s*:?\s*", "\nMEMBERS_PRESENT:\n", norm)
     norm = re.sub(r"(?i)\bpresent\s*:\s*", "\nMEMBERS_PRESENT:\n", norm)
-    norm = re.sub(r"(?i)\bmembers?\s*absent\s*:\s*", "\nMEMBERS_ABSENT:\n", norm)
+    norm = re.sub(r"(?i)\bmembers?\s*absent\s*:?\s*", "\nMEMBERS_ABSENT:\n", norm)
     norm = re.sub(r"(?i)\babsent\s*:\s*", "\nMEMBERS_ABSENT:\n", norm)
     # A bare "Members" line after Present usually introduces Absent names.
     norm = re.sub(r"(?im)^\s*members?\s*$", "MEMBERS_ABSENT:", norm)
@@ -1767,10 +1942,12 @@ def parse_roster_from_text(text, county):
     # run that parser before BZA-scoping truncates surrounding boards.
     members = []
     members.extend(_parse_numbered_membership_roster(text, county))
+    members.extend(_parse_bza_members_lines(text, county))
     text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
+    members.extend(_parse_bza_members_lines(text, county))
     # Agenda header: "Chairman – Shasai S. Hendrix"
     for m in re.finditer(
         r"(?i)\b(?:chairman|vice[-\s]?chairman|chairperson)\s*[–—:-]\s*"
@@ -2042,9 +2219,14 @@ async def process_county(county):
             for known in KNOWN_BOZA_URLS.get(county, []):
                 if boza_url and known.rstrip("/") == boza_url.rstrip("/"):
                     continue
-                # PDFs must go through fetch_document — aiohttp text decode of
-                # binary PDF is truthy junk and would skip the PDF branch.
-                if known.lower().endswith(".pdf") or ".pdf?" in known.lower():
+                # PDFs / CivicPlus ViewFile binaries must go through fetch_document —
+                # aiohttp text decode of binary PDF is truthy junk.
+                known_low = known.lower()
+                if (
+                    known_low.endswith(".pdf")
+                    or ".pdf?" in known_low
+                    or "/viewfile/" in known_low
+                ):
                     content = await fetch_document(known)
                     if content:
                         members.extend(parse_roster_from_text(content, county))
@@ -2104,15 +2286,23 @@ async def process_county(county):
                 docs = await find_minutes_docs(base, boza_url, boza_html)
                 # Also harvest docs linked from curated minutes/agenda pages.
                 for known in KNOWN_BOZA_URLS.get(county, []):
-                    if known.lower().endswith(".pdf") or ".pdf?" in known.lower():
+                    known_low = known.lower()
+                    if (
+                        known_low.endswith(".pdf")
+                        or ".pdf?" in known_low
+                        or "/viewfile/" in known_low
+                    ):
                         continue
                     if not re.search(r"(?i)minute|agenda", known):
                         continue
                     known_html = await fetch(known, allow_render=True)
                     if known_html:
+                        # Generic AgendaCenter hubs mix many boards — require
+                        # per-link BZA labels instead of assume_bza.
+                        assume = "agendacenter" not in known_low.rstrip("/")
                         docs.extend(
                             _collect_docs_from_html(
-                                known, known_html, set(), assume_bza=True
+                                known, known_html, set(), assume_bza=assume
                             )
                         )
                 # Attendance parsing is cheap — use the full year-sampled set so

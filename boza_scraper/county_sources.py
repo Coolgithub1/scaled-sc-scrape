@@ -7,6 +7,8 @@ KNOWN_BOZA_URLS = {
     ],
     "Aiken": [
         "https://www.aikencountysc.gov/AgendaCenter",
+        # Minutes packet filed as an Agenda ViewFile; embeds Members Present.
+        "https://www.aikencountysc.gov/AgendaCenter/ViewFile/Agenda/_02122026-51",
     ],
     "Allendale": [
         "https://www.allendalecounty.com/government/county_government/administration.php",
@@ -84,6 +86,7 @@ KNOWN_BOZA_URLS = {
     ],
     "Greenwood": [
         "https://www.greenwoodcounty-sc.gov/planning",
+        "https://drive.google.com/drive/folders/1SYt_WFPyWucm-k5tdj9D4_KXdgeTvACt?usp=sharing",
     ],
     "Hampton": [
         "http://www.hamptoncountysc.org/316/Boards-Commissions",
@@ -148,7 +151,8 @@ KNOWN_BOZA_URLS = {
         "https://www.williamsburgcounty.sc.gov/AgendaCenter",
     ],
     "York": [
-        # CivicPlus page 1198 currently renders council seats, not BZA roster.
+        "https://www.yorkcountysc.gov/1198/Board-of-Zoning-Appeals",
+        "https://boardsandcommissions.yorkcountygov.com/Board.aspx?ID=42",
         "https://www.yorkcountysc.gov/AgendaCenter",
     ],
 }
