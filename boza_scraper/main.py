@@ -555,14 +555,14 @@ def _is_person(name):
         )
     ):
         return False
+    alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
+    if len(alpha) < 2:
+        return False
     # Reject merged multi-person blobs ("Mike Watson Christopher Pullen").
     if len(alpha) >= 4 and not re.search(r"(?i)\b(jr|sr|ii|iii|iv)\b", name):
         # Allow 4-token names with middle initials only.
         if not any(len(t) == 1 for t in tokens):
             return False
-    alpha = [t for t in tokens if t.isalpha() and len(t) >= 2]
-    if len(alpha) < 2:
-        return False
     # Require mostly capitalized person-name tokens (reject sentence fragments).
     raw_tokens = [t.strip(".,'") for t in name.replace("(", " ").replace(")", " ").split()]
     named = [t for t in raw_tokens if t.isalpha() and len(t) >= 2]
@@ -1361,6 +1361,7 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
             link_text = a.get("aria-label") or ""
         if not _is_document_link(full, link_text) or full in seen:
             continue
+        full = _rewrite_revize_document_url(full)
         # Never treat application/variance forms as minutes/agenda docs.
         blob_early = f"{full} {link_text}".lower()
         if any(
@@ -1553,8 +1554,65 @@ async def find_minutes_docs(base, boza_url=None, boza_html=None):
     return _sample_docs_across_years(docs)
 
 
+def _rewrite_revize_document_url(url):
+    """Map broken county-host document_center PDFs onto the Revize CDN host."""
+    if not url:
+        return url
+    m = re.search(
+        r"(?i)https?://(?:www\.)?co\.pickens\.sc\.us/.+?/(document_center/.+\.pdf)",
+        url,
+    )
+    if m:
+        path = m.group(1).split("?")[0]
+        from urllib.parse import quote
+        enc = "/".join(quote(p) if p else p for p in path.split("/"))
+        return "https://cms5.revize.com/revize/pickenscountysc/" + enc
+    # Relative document_center paths already absolutized by urljoin may still
+    # sit on the county host with spaces; normalize those too.
+    m = re.search(
+        r"(?i)^(https?://(?:www\.)?co\.pickens\.sc\.us/)(.*?)(document_center/.+\.pdf)",
+        url,
+    )
+    if m:
+        path = m.group(3).split("?")[0]
+        from urllib.parse import quote
+        enc = "/".join(quote(p) if p else p for p in path.split("/"))
+        return "https://cms5.revize.com/revize/pickenscountysc/" + enc
+    return url
+
+
+def _parse_district_comma_roster(text, county):
+    """Pickens BOA agenda: 'SAMUEL GILLESPIE, District 2, Chair'."""
+    out = []
+    scope = text
+    m_block = re.search(
+        r"(?is)\bMEMBERS\b(.*?)(?=\bAGENDA\b|\bI\.\s+Welcome|\bCALL TO ORDER\b|$)",
+        text,
+    )
+    if m_block:
+        scope = m_block.group(1)
+    years = _years_from_dates(text[:1500])
+    doc_year = max(years) if years else None
+    for m in re.finditer(
+        r"(?im)^([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){1,3})\s*,\s*"
+        r"(?:District\s*\d+|At[-\s]?Large)\b"
+        r"(?:\s*,\s*(?:Chair|Vice[-\s]?Chair|Chairman|Vice[-\s]?Chairman))?",
+        scope,
+    ):
+        raw = m.group(1).strip()
+        name = _title_case_name(raw)
+        if not name or not _is_person(name):
+            continue
+        term_end = str(doc_year) if doc_year else None
+        out.append(
+            _member(county, name, _status_for(term_end), None, term_end, m.group(0)[:200])
+        )
+    return out
+
+
 async def fetch_document(url):
     """Return extracted text for a document URL, handling PDFs by content sniffing."""
+    url = _rewrite_revize_document_url(url)
     data = await fetch_bytes(url)
     if not data:
         return None
@@ -1997,12 +2055,14 @@ def parse_roster_from_text(text, county):
     members.extend(_parse_numbered_membership_roster(text, county))
     members.extend(_parse_bza_members_lines(text, county))
     members.extend(_parse_board_members_list(text, county))
+    members.extend(_parse_district_comma_roster(text, county))
     text = _bza_scoped_text(text)
     members.extend(_parse_current_members_block(text, county))
     members.extend(_parse_district_roster_text(text, county))
     members.extend(_parse_lastname_comma_roster(text, county))
     members.extend(_parse_bza_members_lines(text, county))
     members.extend(_parse_board_members_list(text, county))
+    members.extend(_parse_district_comma_roster(text, county))
     # Agenda header: "Chairman – Shasai S. Hendrix"
     for m in re.finditer(
         r"(?i)\b(?:chairman|vice[-\s]?chairman|chairperson)\s*[–—:-]\s*"

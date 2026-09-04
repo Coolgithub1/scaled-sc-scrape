@@ -139,7 +139,7 @@ KNOWN_BOZA_URLS = {
     "Pickens": [
         "https://www.co.pickens.sc.us/departments/planning/board_of_appeals_agendas___minutes/index.php",
         "https://www.co.pickens.sc.us/departments/planning/index.php",
-        "https://www.co.pickens.sc.us/government/county_council/boards___commissions.php",
+        "https://cms5.revize.com/revize/pickenscountysc/document_center/Agendas%20&%20Minutes/Board%20of%20Appeals/2022/AGENDA%2004-25-2022.pdf",
     ],
     "Richland": [
         "https://www.richlandcountysc.gov/Government/Get-Involved/Boards-and-Committees/Board-of-Zoning-Appeals",
