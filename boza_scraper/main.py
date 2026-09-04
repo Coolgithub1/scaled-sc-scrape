@@ -725,6 +725,11 @@ def _title_case_name(name):
     suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
     parts = []
     for token in name.split():
+        # Preserve parenthetical nicknames: "(al)" -> "(Al)"
+        if token.startswith("(") and token.endswith(")") and len(token) > 2:
+            inner = token[1:-1]
+            parts.append("(" + (inner[:1].upper() + inner[1:].lower() if inner else inner) + ")")
+            continue
         if re.fullmatch(r"[A-Za-z]\.", token):
             parts.append(token.upper())
         elif "'" in token or "\u2019" in token:
