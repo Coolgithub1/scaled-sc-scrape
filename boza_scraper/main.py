@@ -1982,13 +1982,23 @@ async def process_county(county):
             for known in KNOWN_BOZA_URLS.get(county, []):
                 if boza_url and known.rstrip("/") == boza_url.rstrip("/"):
                     continue
-                html = await fetch(known, allow_render=True)
-                if html:
-                    pages.append((known, html))
-                elif known.lower().endswith(".pdf") or ".pdf?" in known.lower():
+                # PDFs must go through fetch_document — aiohttp text decode of
+                # binary PDF is truthy junk and would skip the PDF branch.
+                if known.lower().endswith(".pdf") or ".pdf?" in known.lower():
                     content = await fetch_document(known)
                     if content:
                         members.extend(parse_roster_from_text(content, county))
+                        # Feed attendance extract via a synthetic doc list later.
+                        if _content_is_minutes(content):
+                            members.extend(
+                                attendance_extract(
+                                    county, [(content, _doc_year(known))], set()
+                                )
+                            )
+                    continue
+                html = await fetch(known, allow_render=True)
+                if html:
+                    pages.append((known, html))
 
             seen_pages = set()
             for page_url, page_html in pages:
