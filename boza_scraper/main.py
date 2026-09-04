@@ -9,7 +9,7 @@ import os
 import re
 import threading
 from datetime import datetime
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlencode, urljoin, urlparse
 
 import aiohttp
 import pandas as pd
@@ -281,11 +281,19 @@ async def fetch(url, allow_render=False):
                 return rendered
         return text
     text = None
+    denied = False
     for attempt in range(3):  # max 3 retries
         try:
             async with session.get(url, timeout=TIMEOUT, allow_redirects=True) as resp:
                 if resp.status == 200:
                     text = await resp.text(errors="ignore")
+                    if text and re.search(r"(?i)access\s+denied|errors\.edgesuite\.net", text[:800]):
+                        denied = True
+                        text = None
+                        break
+                    break
+                if resp.status in (401, 403):
+                    denied = True
                     break
                 if resp.status in RETRYABLE_STATUS:
                     await asyncio.sleep(0.5 * (attempt + 1))
@@ -294,13 +302,63 @@ async def fetch(url, allow_render=False):
         except Exception:
             await asyncio.sleep(0.5 * (attempt + 1))
             continue
+    if text is None and denied:
+        archived = await _fetch_wayback(url)
+        if archived:
+            text = archived
     if text is not None:
         cache[url] = text
     if allow_render and _needs_js_render(text):
         rendered = await fetch_rendered(url)
         if rendered and (text is None or not _needs_js_render(rendered)):
             return rendered
+        if rendered is None and text is None and denied:
+            # Playwright also blocked (Akamai) — try Wayback once more.
+            archived = await _fetch_wayback(url)
+            if archived:
+                cache[url] = archived
+                return archived
     return text
+
+
+async def _fetch_wayback(url):
+    """Fetch a recent Wayback Machine snapshot when the live host blocks us."""
+    if not url or "web.archive.org" in url.lower():
+        return None
+    ckey = "WAYBACK::" + url
+    if ckey in cache:
+        return cache[ckey]
+    # Prefer a 2025/2026 snapshot if available via the availability API.
+    api = (
+        "https://archive.org/wayback/available?"
+        + urlencode({"url": url, "timestamp": f"{CURRENT_YEAR}0601"})
+    )
+    snapshot = None
+    try:
+        async with session.get(api, timeout=TIMEOUT, allow_redirects=True) as resp:
+            if resp.status == 200:
+                data = await resp.json(content_type=None)
+                snapshot = (
+                    (data.get("archived_snapshots") or {})
+                    .get("closest", {})
+                    .get("url")
+                )
+    except Exception:
+        snapshot = None
+    if not snapshot:
+        # Direct calendar path used successfully for Dorchester.
+        snapshot = f"https://web.archive.org/web/{CURRENT_YEAR}/{url}"
+    try:
+        async with session.get(snapshot, timeout=TIMEOUT, allow_redirects=True) as resp:
+            if resp.status != 200:
+                return None
+            text = await resp.text(errors="ignore")
+            if text and not re.search(r"(?i)access\s+denied|errors\.edgesuite\.net", text[:800]):
+                cache[ckey] = text
+                return text
+    except Exception:
+        return None
+    return None
 
 
 async def fetch_bytes(url):

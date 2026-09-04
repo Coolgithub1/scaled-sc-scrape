@@ -61,8 +61,10 @@ KNOWN_BOZA_URLS = {
         "https://dilloncountysc.org/departments/services/building_code_enforcement_planning_zoning.php",
     ],
     "Dorchester": [
-        "https://www.dorchestercounty.org/government/planning-development/planning-zoning/board-of-zoning-appeals",
+        # Live host is Akamai-blocked from many datacenter IPs; Wayback works.
+        "https://web.archive.org/web/20260513195421/https://www.dorchestercountysc.gov/government/planning-development/planning-zoning/board-of-zoning-appeals",
         "https://www.dorchestercountysc.gov/government/planning-development/planning-zoning/board-of-zoning-appeals",
+        "https://www.dorchestercounty.org/government/planning-development/planning-zoning/board-of-zoning-appeals",
     ],
     "Edgefield": [
         "https://edgefieldcounty.sc.gov/building-permits-applications-and-fees",
