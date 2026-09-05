@@ -119,7 +119,7 @@ South Carolina,Clarendon,Johnny Wilson,sitting,,2033,male,MatchBoard Clarendon C
 South Carolina,Clarendon,Justin Harrington,sitting,,2029,male,MatchBoard Clarendon County Zoning Board of Appeals; term_expiration=2029-05-31 04:00:00.000000
 South Carolina,Clarendon,"Robert Fleming, Jr.",sitting,,2029,male,MatchBoard Clarendon County Zoning Board of Appeals; term_expiration=2029-06-30 04:00:00.000000
 South Carolina,Colleton,Anthony Bunton,sitting,,2030,male,Anthony Bunton January 2030 Member
-South Carolina,Colleton,"Douglas Mixson, Jr.",sitting,,,male,Minutes attendance 2021-2025; seen as absent/present | still appearing in 2025 minutes | still appearing in 2025 minutes
+South Carolina,Colleton,"Douglas Mixson, Jr.",sitting,,,male,Minutes attendance 2021-2025; seen as absent/present | still appearing in 2025 minutes | still appearing in 2025 minutes | still appearing in 2025 minutes | still appearing in 2025 minutes
 South Carolina,Colleton,Mark Wysong,sitting,,2030,male,Mark Wysong January 2030 Member
 South Carolina,Colleton,Michael Shane Moody,sitting,,,male,Michael Shane Moody July 2026 Member | Minutes attendance 2023-2024; seen as present
 South Carolina,Colleton,Phillip Austin Rizer,sitting,,,male,Phillip Austin Rizer April 2028 Member | Minutes attendance 2024-2025; seen as absent/present | Minutes attendance 2022-2023; seen as absent/present | Minutes attendance 2021; seen as absent
@@ -285,15 +285,35 @@ South Carolina,Richland,Lashawn Landy,sitting,2026,2029,unknown,"Lashawn Landy (
 South Carolina,Richland,Merrell Johnson,sitting,2024,2027,unknown,"Merrell Johnson (1st Term) Appointment: November 19, 2024 Reappointment: November 19, 2027"
 South Carolina,Richland,Shasai Hendrix,sitting,2026,2029,unknown,"Shasai Hendrix (2nd Term) Appointment: July 7, 2026 Term Expires: July 7, 2029"
 South Carolina,Richland,(Vacant),vacant,,,,Unnamed seventh seat vacant
-South Carolina,Spartanburg,Angela L. Geter,sitting,2018,2030,female,District # 03/19/18 02/16/26 01/17/30
-South Carolina,Spartanburg,Jack D. Gowan Jr.,sitting,2013,2027,male,"At Large Jack D. Gowan, 10/21/13 01/23/23 01/17/27"
-South Carolina,Spartanburg,Jackie Ray Crotts,sitting,2023,2029,unknown,"District #6 Jackie ""Ray"" 05/15/23 02/17/25 02/17/29"
-South Carolina,Spartanburg,James David Langford Jr.,sitting,2023,2027,male,District #5 01/23/23 01/23/23 01/17/27
-South Carolina,Spartanburg,M. Steve Hammett,sitting,2026,2030,male,District # 06/15/26 06/15/26 06/15/30
-South Carolina,Spartanburg,Michael Erik Horton,sitting,2026,2030,male,"At Large Michael ""Erik"" 05/18/26 05/18/26 5/18/30"
-South Carolina,Spartanburg,Stephen J. Wunder,sitting,2022,2030,male,02/21/22 12/08/25 01/17/30
-South Carolina,Spartanburg,Thomas Albert Davies,sitting,2010,2027,male,District # 03/15/10 01/23/23 01/17/27
-South Carolina,Spartanburg,Wallace Jason Patrick,sitting,2012,2028,male,"District # Spartanburg, SC 2932 05/21/12 01/22/24 01/17/28"
+South Carolina,Spartanburg,Allison Ezell,historical,,,female,Minutes attendance 2010; seen as present
+South Carolina,Spartanburg,Andrew Hayes,historical,,,male,Minutes attendance 2013; seen as absent
+South Carolina,Spartanburg,David Long,historical,,,male,Minutes attendance 2010; seen as present
+South Carolina,Spartanburg,Edwin Haskell,historical,,,male,Minutes attendance 2010-2011; seen as present
+South Carolina,Spartanburg,Gerald Noe,historical,,,male,Minutes attendance 2010-2011; seen as absent/present
+South Carolina,Spartanburg,Glenda Brady,historical,,,female,Minutes attendance 2020-2025; seen as absent/present
+South Carolina,Spartanburg,Heath Strawn,historical,,,male,Minutes attendance 2013-2015; seen as absent
+South Carolina,Spartanburg,Jackie Moss,historical,,,unknown,Minutes attendance 2010-2011; seen as absent/present
+South Carolina,Spartanburg,Jim Brannon,historical,,,male,Minutes attendance 2010-2011; seen as absent/present
+South Carolina,Spartanburg,Jonathan Adams,historical,,,male,Minutes attendance 2018-2019; seen as absent
+South Carolina,Spartanburg,Kae Fleming,historical,,,female,Minutes attendance 2018-2025; seen as absent/present
+South Carolina,Spartanburg,Kyle Atkins,historical,,,unknown,Minutes attendance 2010; seen as absent/present
+South Carolina,Spartanburg,Laurie Horton,historical,,,female,Minutes attendance 2010-2011; seen as present
+South Carolina,Spartanburg,Louise Rakes,historical,,,female,
+South Carolina,Spartanburg,Marion Gramling Jr.,historical,,,female,Minutes attendance 2010-2022; seen as absent/present
+South Carolina,Spartanburg,Michael Padgett,historical,,,male,Minutes attendance 2020-2023; seen as present
+South Carolina,Spartanburg,Ronald Stokes,historical,,,male,Minutes attendance 2010-2012; seen as absent/present
+South Carolina,Spartanburg,Savannah Sabo,historical,,,female,Minutes attendance 2010-2011; seen as present
+South Carolina,Spartanburg,Tracy McCall,historical,,,unknown,Minutes attendance 2011-2013; seen as absent/present
+South Carolina,Spartanburg,Travis Tuten,historical,,,male,Minutes attendance 2010-2011; seen as absent/present
+South Carolina,Spartanburg,Angela L. Geter,sitting,,,female,District # 03/19/18 02/16/26 01/17/30 | Minutes attendance 2020-2026; seen as absent/present
+South Carolina,Spartanburg,Jack D. Gowan Jr.,sitting,,,male,"At Large Jack D. Gowan, 10/21/13 01/23/23 01/17/27 | Minutes attendance 2016-2020; seen as present"
+South Carolina,Spartanburg,Jackie Ray Crotts,sitting,,,male,"District #6 Jackie ""Ray"" 05/15/23 02/17/25 02/17/29 | Minutes attendance 2023-2026; seen as absent/present"
+South Carolina,Spartanburg,James David Langford Jr.,sitting,,,male,District #5 01/23/23 01/23/23 01/17/27 | Minutes attendance 2023-2026; seen as absent/present | Minutes attendance 2024-2025; seen as present
+South Carolina,Spartanburg,M. Steve Hammett,sitting,,,male,District # 06/15/26 06/15/26 06/15/30 | Minutes attendance 2026; seen as present
+South Carolina,Spartanburg,Michael Erik Horton,sitting,,,male,"At Large Michael ""Erik"" 05/18/26 05/18/26 5/18/30 | Minutes attendance 2026; seen as present"
+South Carolina,Spartanburg,Stephen J. Wunder,sitting,,,male,02/21/22 12/08/25 01/17/30 | Minutes attendance 2022-2026; seen as absent/present
+South Carolina,Spartanburg,Thomas Albert Davies,sitting,,,male,District # 03/15/10 01/23/23 01/17/27 | Minutes attendance 2010-2026; seen as absent/present
+South Carolina,Spartanburg,Wallace Jason Patrick,sitting,,,male,"District # Spartanburg, SC 2932 05/21/12 01/22/24 01/17/28 | Minutes attendance 2013-2026; seen as absent/present"
 South Carolina,Sumter,Claude Wheeler,historical,,,male,Jan 2026 minutes (absent); not on April 2026 official 9-member list
 South Carolina,Sumter,Cassandra Floyd,sitting,,,female,Minutes attendance 2026; seen as present
 South Carolina,Sumter,Clay Smith,sitting,,,male,Minutes attendance 2025-2026; seen as absent/present

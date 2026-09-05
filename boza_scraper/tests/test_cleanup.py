@@ -85,3 +85,43 @@ def test_repair_drops_calhoun_planning_and_adds_marion():
     assert len(marion) == 7
     vacant = [r for r in fixed if r["status"] == "vacant"]
     assert any(r["county"] == "Lexington" for r in vacant)
+
+
+def test_repair_drops_spartanburg_blobs():
+    rows = [
+        {
+            "state": "South Carolina",
+            "county": "Spartanburg",
+            "name": "Director Of Building",
+            "status": "historical",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "Minutes attendance 2013",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Spartanburg",
+            "name": "Kyle Atkins",
+            "status": "historical",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "Minutes attendance 2010",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Spartanburg",
+            "name": "Glenda Brad Y",
+            "status": "historical",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "Minutes attendance 2020-2025",
+        },
+    ]
+    fixed = repair(rows)
+    names = {r["name"] for r in fixed if r["county"] == "Spartanburg"}
+    assert "Director Of Building" not in names
+    assert "Kyle Atkins" in names
+    assert "Glenda Brady" in names

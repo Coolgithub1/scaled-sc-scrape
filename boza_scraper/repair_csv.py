@@ -46,6 +46,18 @@ NAME_FIXES = {
     ("Chester", "mike mcbrayer"): "Mike McBrayer",
     ("Pickens", "harry e. carson jr."): "Harry E. Carson Jr.",
     ("Beaufort", "stanley mack"): "Stanley Mack",
+    ("Spartanburg", "glenda brad y"): "Glenda Brady",
+    ("Spartanburg", "louise rake s"): "Louise Rakes",
+    ("Spartanburg", "jr. marion gramling"): "Marion Gramling Jr.",
+    ("Spartanburg", "tracy mccall"): "Tracy McCall",
+}
+
+DROP_NAME_KEYS = {
+    "director of building",
+    "jr. angela viney",
+    "jr. jason patrick louise rakes marion gramling john harris",
+    "jr. marion gramling jason patrick louise rakes",
+    "jr. thomas davies kae fleming jason patrick joan holliday",
 }
 
 # Official published sitting names for counties we corrected from primary sources.
@@ -137,6 +149,8 @@ def repair(rows):
         tenure = row.get("tenure") or ""
 
         if county == "Calhoun" and key in CALHOUN_PLANNING_COMMISSION:
+            continue
+        if key in DROP_NAME_KEYS or key.startswith("jr. ") and " " in key[4:] and len(key.split()) >= 5:
             continue
 
         name = NAME_FIXES.get((county, key), name)
