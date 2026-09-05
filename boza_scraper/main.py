@@ -641,6 +641,8 @@ _NON_PERSON_WORDS = {
     "planning", "council", "office", "division", "authority", "court", "clerk",
     "city", "town", "member", "members", "title", "video", "file", "files",
     "land", "use", "development", "services", "district", "property", "owner",
+    "administration", "departments", "legislative", "delegation",
+    "accommodations", "communications", "welfare",
     "applicant", "application", "variance", "hardship", "exception", "request",
     "information", "signature", "signed", "email", "phone", "address", "other",
     "instructions", "form", "yes", "site", "subject", "location", "map",
