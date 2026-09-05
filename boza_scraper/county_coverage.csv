@@ -1,0 +1,47 @@
+county,rows,sitting,historical,vacant,coverage,notes
+Abbeville,7,5,0,2,sitting_only,2 vacant seat(s) recorded
+Aiken,9,9,0,0,sitting_only,
+Allendale,0,0,0,0,no_public_roster,
+Anderson,11,6,4,1,sitting_and_historic,1 vacant seat(s) recorded
+Bamberg,0,0,0,0,no_public_roster,
+Barnwell,0,0,0,0,no_public_roster,
+Beaufort,29,7,22,0,sitting_and_historic,
+Berkeley,8,5,3,0,sitting_and_historic,
+Calhoun,5,5,0,0,sitting_only,Planning Commission rows removed
+Charleston,35,9,26,0,sitting_and_historic,sitting from eScribe BoardInformation/28; historic from minutes OCR
+Cherokee,0,0,0,0,no_county_bza,
+Chester,12,5,5,2,sitting_and_historic,2 vacant seat(s) recorded
+Chesterfield,0,0,0,0,no_public_roster,
+Clarendon,5,5,0,0,sitting_only,
+Colleton,6,6,0,0,sitting_only,
+Darlington,5,5,0,0,sitting_only,
+Dillon,0,0,0,0,board_named_no_roster,
+Dorchester,7,7,0,0,sitting_only,
+Edgefield,3,1,2,0,sitting_and_historic,official board size is 3
+Fairfield,8,8,0,0,sitting_only,
+Florence,9,7,0,2,sitting_only,2 vacant seat(s) recorded
+Georgetown,6,6,0,0,sitting_only,
+Greenville,19,8,10,1,sitting_and_historic,1 vacant seat(s) recorded; sitting from BoardDetails id=76; District 28 vacant
+Greenwood,7,7,0,0,sitting_only,
+Hampton,0,0,0,0,not_zoning_bza,
+Horry,9,9,0,0,sitting_only,
+Jasper,6,4,2,0,sitting_and_historic,published roster is 4 sitting
+Kershaw,5,5,0,0,sitting_only,
+Lancaster,5,5,0,0,sitting_only,
+Laurens,0,0,0,0,no_county_bza,
+Lee,0,0,0,0,no_public_roster,
+Lexington,9,7,0,2,sitting_only,2 vacant seat(s) recorded
+Marion,7,7,0,0,sitting_only,
+Marlboro,0,0,0,0,no_public_roster,
+McCormick,5,4,0,1,sitting_only,1 vacant seat(s) recorded
+Newberry,9,7,2,0,sitting_and_historic,
+Oconee,7,7,0,0,sitting_only,
+Orangeburg,7,7,0,0,sitting_only,
+Pickens,19,7,12,0,sitting_and_historic,
+Richland,7,6,0,1,sitting_only,1 vacant seat(s) recorded
+Saluda,0,0,0,0,no_county_bza,
+Spartanburg,29,9,20,0,sitting_and_historic,
+Sumter,10,9,1,0,sitting_and_historic,official board size is 9
+Union,0,0,0,0,no_county_bza,
+Williamsburg,0,0,0,0,no_county_bza,
+York,7,7,0,0,sitting_only,
