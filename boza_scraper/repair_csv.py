@@ -42,6 +42,22 @@ NAME_FIXES = {
     ("Orangeburg", "hebert sellers"): "Herbert Sellers",
     ("Orangeburg", "yvonne johnson"): "Yvonne Gooden-Johnson",
     ("Charleston", "ad jordan"): "AD Jordan",
+    ("Charleston", "a.d. jordan"): "AD Jordan",
+    ("Charleston", "ross nelson"): "G. Ross Nelson",
+    ("Charleston", "g. nelson"): "G. Ross Nelson",
+    ("Charleston", "g nelson"): "G. Ross Nelson",
+    ("Charleston", "william ray"): "William H. Ray",
+    ("Charleston", "william h. ray jr"): "William H. Ray",
+    ("Charleston", "sammuel mcconnell"): "Samuel McConnell",
+    ("Charleston", "john e. bevon jr"): "John E. Bevon Jr.",
+    ("Charleston", "tonnia switzer- smalls"): "Tonnia Switzer-Smalls",
+    ("Charleston", "mare marchant"): "Marc Marchant",
+    ("Charleston", "ross d. nelson"): "G. Ross Nelson",
+    ("Charleston", "sr dino manos"): "Dino Manos",
+    ("Charleston", "thomas goldstein"): "Thomas R. Goldstein",
+    ("Greenville", "james akers"): "James Akers Jr.",
+    ("Greenville", "james akers, jr."): "James Akers Jr.",
+    ("Greenville", "brittney farrar"): "Brittany Farrar",
     ("Beaufort", "mark mcginnis"): "Mark McGinnis",
     ("Chester", "mike mcbrayer"): "Mike McBrayer",
     ("Pickens", "harry e. carson jr."): "Harry E. Carson Jr.",
@@ -88,8 +104,88 @@ SUMTER_SITTING = {
     "cassandra floyd",
 }
 
-CHARLESTON_TERMS = {
-    "ad jordan": ("2023", "2026", "eScribe BoardInformation/28; appointed 23 May 2023"),
+CHARLESTON_SITTING = [
+    ("Brad Brown", "2025", "2028", "eScribe BoardInformation/28; term 1 Jan 2025-31 Dec 2028"),
+    ("AD Jordan", "2023", "2026", "eScribe BoardInformation/28; appointed 23 May 2023"),
+    ("Roy Neal", "2023", "2026", "eScribe BoardInformation/28; appointed 25 Apr 2023"),
+    ("G. Ross Nelson", "2023", "2026", "eScribe BoardInformation/28; appointed 23 May 2023"),
+    ("William H. Ray", "2025", "2028", "eScribe BoardInformation/28; term 1 Jan 2025-31 Dec 2028"),
+    ("Robert Siedell", "2023", "2026", "eScribe BoardInformation/28; appointed 23 May 2023"),
+    ("Jessica Smith", "2025", "2028", "eScribe BoardInformation/28; appointed 25 Feb 2025"),
+    ("Shana Smith", "2025", "2028", "eScribe BoardInformation/28; term 1 Jan 2025-31 Dec 2028"),
+    ("Doug Truslow", "2023", "2026", "eScribe BoardInformation/28; appointed 23 May 2023"),
+]
+
+GREENVILLE_SITTING = [
+    ("Lisa Bracewell", "", "2028", "District 17; expires 5/31/2028; BoardDetails id=76"),
+    ("James Akers Jr.", "", "2026", "District 20; expires 5/31/2026; BoardDetails id=76"),
+    ("Laura Godfrey", "", "2026", "District 21; expires 11/30/2026; BoardDetails id=76"),
+    ("Brennan Stonerock", "", "2027", "District 21; expires 5/31/2027; BoardDetails id=76"),
+    ("Christopher Winters", "", "2027", "District 21; expires 5/31/2027; BoardDetails id=76"),
+    ("Josh Hakala", "", "2026", "District 22; expires 11/30/2026; BoardDetails id=76"),
+    ("John Boyanoski", "", "2027", "District 23; expires 5/31/2027; BoardDetails id=76"),
+    ("Michael Roth", "", "2026", "District 24; expires 5/31/2026; BoardDetails id=76"),
+]
+
+GREENVILLE_VACANT = "District 28 vacant; expires 5/31/2027"
+
+# Historic names taken from dated BZA minutes attendance / Board Members lists.
+CHARLESTON_HISTORIC = [
+    ("Samuel McConnell", "Minutes attendance 2010-2020"),
+    ("Laura Khare", "Minutes attendance 2010-2015"),
+    ("Charles Baker", "Minutes attendance 2010"),
+    ("Robert Woodul", "Minutes attendance 2010-2020"),
+    ("T. Jackson Bender", "Minutes attendance 2010"),
+    ("Clyde J. Smalls", "Minutes attendance 2011-2012"),
+    ("Thomas R. Goldstein", "Minutes attendance 2011-2019"),
+    ("Robert A. Pickard", "Minutes attendance 2011-2014"),
+    ("John R. Hope", "Minutes attendance 2011"),
+    ("Dino Manos", "Minutes attendance 2011-2016"),
+    ("Leonard Blank", "Minutes attendance 2012"),
+    ("Terri Craven", "Minutes attendance 2012-2018"),
+    ("John E. Bevon Jr.", "Minutes attendance 2013-2018"),
+    ("Cheryl Cromwell", "Minutes attendance 2013-2016"),
+    ("Joel Evans", "Minutes attendance 2011-2018"),
+    ("Lauri Lechner", "Minutes attendance 2017-2020"),
+    ("Ronald Ladson", "Minutes attendance 2018"),
+    ("Megan Martino", "Minutes attendance 2018-2019"),
+    ("Joseph A. Boykin", "Minutes attendance 2019-2022"),
+    ("H. Bernard Freeman", "Minutes attendance 2019-2022"),
+    ("Keane Steele", "Minutes attendance 2019"),
+    ("Marc Marchant", "Minutes attendance 2021-2024"),
+    ("Jesse Williams", "Minutes attendance 2021-2022"),
+    ("Savanah Murray", "Minutes attendance 2021-2022"),
+    ("Morgan Asbell", "Minutes attendance 2022"),
+    ("Tonnia Switzer-Smalls", "Minutes attendance 2022"),
+]
+GREENVILLE_HISTORIC = [
+    ("Teresa Barber", "Minutes attendance 2022-2024"),
+    ("Brittany Farrar", "Minutes attendance 2022-2024"),
+    ("Paul Hamilton", "Minutes attendance 2022-2024"),
+    ("Mark Hattendorf", "Minutes attendance 2022-2024"),
+    ("Nicholas Hollingshad", "Minutes attendance 2022-2023"),
+    ("Kenneth Matesevac", "Minutes attendance 2022-2023"),
+    ("Michelle Shuman", "Minutes attendance 2022-2024"),
+    ("Yolanda Brockman", "Minutes attendance 2024-2025"),
+    ("Angelica Hall", "Minutes attendance 2024-2025"),
+    (
+        "Alexander Ward",
+        "Former BoardDetails appointee (District 17, listed through 5/31/2027); "
+        "not on the current official 9-seat roster",
+    ),
+]
+
+CHARLESTON_STAFF_KEYS = {
+    "kelvin huger", "jr. kelvin huger", "sally brooks", "win carlisle",
+    "genesis clark", "niki grimball", "cole hair", "riley hays",
+    "andrea melocik-white", "andrea melocik white", "andrea pietras",
+    "karie vasche", "karie vasché", "jenny werking", "joyce mcgrew",
+    "stephen risse", "lee gastley", "jennifer stiles", "joshua downey",
+    "joel evans",  # appears in staff-mixed OCR years after 2018
+}
+
+CHARLESTON_JUNK_KEYS = {
+    "for the bza", "state regulations",
 }
 
 VACANT_SEATS = [
@@ -200,12 +296,13 @@ def repair(rows):
             status = "historical"
             tenure = "Jan 2026 minutes (absent); not on April 2026 official 9-member list"
 
-        if county == "Charleston" and key in CHARLESTON_TERMS:
-            start, end, note = CHARLESTON_TERMS[key]
-            tenure = note
-
         if county == "Colleton" and key.startswith("douglas mixson"):
             # Still in 2025 minutes; keep historical only if we have no 2026 sighting.
+            tenure = re.sub(
+                r"(?:\s*\|\s*still appearing in 2025 minutes)+",
+                "",
+                tenure or "",
+            ).strip(" |")
             if "2025" in (tenure or "") and "2026" not in (tenure or ""):
                 status = "sitting"
                 tenure = (tenure + " | still appearing in 2025 minutes").strip(" |")
@@ -261,7 +358,103 @@ def repair(rows):
                 "tenure": tenure,
             })
 
+    out = _lock_official_county(
+        out, detector, "Charleston", CHARLESTON_SITTING, CHARLESTON_HISTORIC, [],
+        extra_drop=CHARLESTON_STAFF_KEYS | CHARLESTON_JUNK_KEYS,
+    )
+    out = _lock_official_county(
+        out, detector, "Greenville", GREENVILLE_SITTING, GREENVILLE_HISTORIC,
+        [GREENVILLE_VACANT],
+    )
     return out
+
+
+def _lock_official_county(
+    rows, detector, county, sitting, historic, vacant_tenures, extra_drop=None,
+):
+    """Overwrite sitting from the official roster; keep/add minutes historic."""
+    extra_drop = extra_drop or set()
+    sitting_map = {_key(name): (name, start, end, note) for name, start, end, note in sitting}
+    historic_map = {_key(name): (name, note) for name, note in historic}
+    kept = []
+    seen_keys = set()
+    for row in rows:
+        if row["county"] != county:
+            kept.append(row)
+            continue
+        name = row.get("name") or ""
+        key = _key(name)
+        if name == VACANT_NAME or key in extra_drop:
+            continue
+        if key in sitting_map:
+            official_name, start, end, note = sitting_map[key]
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            kept.append({
+                "state": STATE,
+                "county": county,
+                "name": official_name,
+                "status": "sitting",
+                "term_start": start,
+                "term_end": end,
+                "gender": _guess_gender(detector, official_name),
+                "tenure": note,
+            })
+            continue
+        if key not in historic_map:
+            continue
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        hist_name, hist_note = historic_map[key]
+        kept.append({
+            "state": STATE,
+            "county": county,
+            "name": hist_name,
+            "status": "historical",
+            "term_start": "",
+            "term_end": "",
+            "gender": _guess_gender(detector, hist_name),
+            "tenure": hist_note,
+        })
+    for key, (name, start, end, note) in sitting_map.items():
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        kept.append({
+            "state": STATE,
+            "county": county,
+            "name": name,
+            "status": "sitting",
+            "term_start": start,
+            "term_end": end,
+            "gender": _guess_gender(detector, name),
+            "tenure": note,
+        })
+    for key, (name, note) in historic_map.items():
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        kept.append({
+            "state": STATE,
+            "county": county,
+            "name": name,
+            "status": "historical",
+            "term_start": "",
+            "term_end": "",
+            "gender": _guess_gender(detector, name),
+            "tenure": note,
+        })
+    existing_vacant = {
+        (r["county"], r.get("tenure") or "")
+        for r in kept
+        if r["county"] == county and r["status"] == "vacant"
+    }
+    for seat in vacant_tenures:
+        if (county, seat) not in existing_vacant:
+            kept.append(vacant_row(STATE, county, seat))
+    return kept
 
 
 def write_coverage(rows):
@@ -298,6 +491,10 @@ def write_coverage(rows):
             extras.append("published roster is 4 sitting")
         if county == "Sumter":
             extras.append("official board size is 9")
+        if county == "Charleston":
+            extras.append("sitting from eScribe BoardInformation/28; historic from minutes OCR")
+        if county == "Greenville":
+            extras.append("sitting from BoardDetails id=76; District 28 vacant")
         out.append({
             "county": county,
             "rows": len(recs),

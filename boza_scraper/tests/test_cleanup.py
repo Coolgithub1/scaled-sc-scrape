@@ -9,7 +9,7 @@ from cleanup import (
     is_attendance_only_tenure,
     sanitize_tenure,
 )
-from repair_csv import CALHOUN_PLANNING_COMMISSION, repair
+from repair_csv import CALHOUN_PLANNING_COMMISSION, CHARLESTON_SITTING, GREENVILLE_SITTING, repair
 
 
 def test_sanitize_strips_phone_email_address():
@@ -125,3 +125,81 @@ def test_repair_drops_spartanburg_blobs():
     assert "Director Of Building" not in names
     assert "Kyle Atkins" in names
     assert "Glenda Brady" in names
+
+
+def test_invert_g_ross_nelson():
+    assert invert_last_first("Nelson, G. Ross") == "G. Ross Nelson"
+    assert invert_name_from_tenure(
+        "G. Nelson", "Nelson, G. Ross Member 23 May 2023 31 Dec 2026 Active"
+    ) == "G. Ross Nelson"
+
+
+def test_repair_locks_charleston_and_greenville():
+    rows = [
+        {
+            "state": "South Carolina",
+            "county": "Charleston",
+            "name": "Jenny Werking",
+            "status": "sitting",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "Planner IV",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Charleston",
+            "name": "Pay My Taxes",
+            "status": "sitting",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "nav",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Charleston",
+            "name": "Samuel McConnell",
+            "status": "sitting",
+            "term_start": "2010",
+            "term_end": "2020",
+            "gender": "",
+            "tenure": "old",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Greenville",
+            "name": "Alexander Ward",
+            "status": "sitting",
+            "term_start": "",
+            "term_end": "2027",
+            "gender": "",
+            "tenure": "Alexander Ward 17 5/31/2027",
+        },
+        {
+            "state": "South Carolina",
+            "county": "Greenville",
+            "name": "How Do I",
+            "status": "sitting",
+            "term_start": "",
+            "term_end": "",
+            "gender": "",
+            "tenure": "nav",
+        },
+    ]
+    fixed = repair(rows)
+    ch = [r for r in fixed if r["county"] == "Charleston"]
+    gv = [r for r in fixed if r["county"] == "Greenville"]
+    ch_sitting = {r["name"] for r in ch if r["status"] == "sitting"}
+    gv_sitting = {r["name"] for r in gv if r["status"] == "sitting"}
+    assert ch_sitting == {name for name, *_ in CHARLESTON_SITTING}
+    assert "Jenny Werking" not in {r["name"] for r in ch}
+    assert "Pay My Taxes" not in {r["name"] for r in ch}
+    sam = next(r for r in ch if r["name"] == "Samuel McConnell")
+    assert sam["status"] == "historical"
+    assert sam["term_start"] == ""
+    assert gv_sitting == {name for name, *_ in GREENVILLE_SITTING}
+    ward = next(r for r in gv if r["name"] == "Alexander Ward")
+    assert ward["status"] == "historical"
+    assert "How Do I" not in {r["name"] for r in gv}
+    assert any(r["status"] == "vacant" and "District 28" in r["tenure"] for r in gv)

@@ -36,12 +36,15 @@ KNOWN_BOZA_URLS = {
         "https://calhouncounty.sc.gov/planning-commission-board-zoning-appeals",
     ],
     "Charleston": [
+        # Official 9-member sitting roster (eScribe). Do not scrape the county homepage.
+        "https://bm-public-charlestoncounty.escribemeetings.com/BoardDetails/BoardInformation/28",
+        # Minutes archive (<option> PDFs). Treated as a minutes index, not a roster.
         "https://www.charlestoncounty.gov/departments/zoning-planning/bza.php",
         "https://www.charlestoncounty.org/departments/zoning-planning/bza.php",
-        "https://bm-public-charlestoncounty.escribemeetings.com/BoardDetails/BoardInformation/28",
-        # Meeting summaries host Members Present when no separate roster page exists.
-        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-MEETING.pdf",
-        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-ANNUAL-BUSINESS-MEETING.pdf",
+        # Native-text meeting summaries with Members Present / Members Absent.
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-minutes/archived/2026/05-04-2026.pdf",
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-minutes/archived/2026/06-01-2026.pdf",
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza-minutes/archived/2026/04-20-2026.pdf",
     ],
     "Cherokee": [
         "https://cherokeecountysc.gov/building-safety/planning-commission/",
@@ -104,8 +107,19 @@ KNOWN_BOZA_URLS = {
         "https://api.matchboard.tech/app/boards/383",
     ],
     "Greenville": [
+        # Official 9-seat sitting roster. Do not scrape the county homepage chrome.
         "https://www.greenvillecounty.org/apps/countycouncilboard/BoardDetails.aspx?id=76",
-        "https://www.greenvillecounty.org/Zoning/BoardOfZoningAppeals.aspx",
+        # BZA minutes live in DirectoryListingGC (Details.aspx serves the PDF).
+        "https://www.greenvillecounty.org/Zoning/Agendas.aspx",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2f2026",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2f2025",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2024",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2023",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2022",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2021",
     ],
     "Greenwood": [
         "https://www.greenwoodcounty-sc.gov/planning",
@@ -216,6 +230,53 @@ MATCHBOARD_ENTITY_IDS = {
     "Greenwood": 24,
     "Kershaw": 28,
     "Orangeburg": 38,
+}
+
+# Sitting roster must come only from these pages. Homepage discovery and
+# full-text / nav heuristics are skipped for these counties.
+LOCKED_ROSTER_URLS = {
+    "Charleston": [
+        "https://bm-public-charlestoncounty.escribemeetings.com/BoardDetails/BoardInformation/28",
+    ],
+    "Greenville": [
+        "https://www.greenvillecounty.org/apps/countycouncilboard/BoardDetails.aspx?id=76",
+    ],
+}
+
+# Minutes indexes crawled for historic attendance. Never parsed as sitting rosters.
+LOCKED_MINUTES_INDEX_URLS = {
+    "Charleston": [
+        "https://www.charlestoncounty.gov/departments/zoning-planning/bza.php",
+        "https://www.charlestoncounty.org/departments/zoning-planning/bza.php",
+    ],
+    "Greenville": [
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2f2026",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2f2025",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2024",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2023",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2022",
+        "https://www.greenvillecounty.org/apps/DirectoryListingGC/Default.aspx?d=BZAAgendas&f=%2f%2fMinutes%2f%2fPrevious+Minutes%2f%2f2021",
+    ],
+}
+
+# Staff / attorney / secretary names that appear in minutes but are not members.
+COUNTY_STAFF_EXCLUDE = {
+    "Charleston": {
+        "kelvin huger",
+        "sally brooks",
+        "win carlisle",
+        "genesis clark",
+        "niki grimball",
+        "cole hair",
+        "riley hays",
+        "andrea melocik-white",
+        "andrea melocik white",
+        "karie vasche",
+        "jenny werking",
+    },
 }
 
 # Honest coverage labels for counties that publish no BZA roster, or have no BZA.

@@ -8,7 +8,7 @@ Barnwell,0,0,0,0,no_public_roster,
 Beaufort,29,7,22,0,sitting_and_historic,
 Berkeley,8,5,3,0,sitting_and_historic,
 Calhoun,5,5,0,0,sitting_only,Planning Commission rows removed
-Charleston,9,9,0,0,sitting_only,
+Charleston,35,9,26,0,sitting_and_historic,sitting from eScribe BoardInformation/28; historic from minutes OCR
 Cherokee,0,0,0,0,no_county_bza,
 Chester,12,5,5,2,sitting_and_historic,2 vacant seat(s) recorded
 Chesterfield,0,0,0,0,no_public_roster,
@@ -21,7 +21,7 @@ Edgefield,3,1,2,0,sitting_and_historic,official board size is 3
 Fairfield,8,8,0,0,sitting_only,
 Florence,9,7,0,2,sitting_only,2 vacant seat(s) recorded
 Georgetown,6,6,0,0,sitting_only,
-Greenville,9,9,0,0,sitting_only,
+Greenville,19,8,10,1,sitting_and_historic,1 vacant seat(s) recorded; sitting from BoardDetails id=76; District 28 vacant
 Greenwood,7,7,0,0,sitting_only,
 Hampton,0,0,0,0,not_zoning_bza,
 Horry,9,9,0,0,sitting_only,

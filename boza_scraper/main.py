@@ -37,7 +37,13 @@ from config import (
 )
 from counties import COUNTIES
 from cache import cache
-from county_sources import KNOWN_BOZA_URLS, MATCHBOARD_ENTITY_IDS
+from county_sources import (
+    COUNTY_STAFF_EXCLUDE,
+    KNOWN_BOZA_URLS,
+    LOCKED_MINUTES_INDEX_URLS,
+    LOCKED_ROSTER_URLS,
+    MATCHBOARD_ENTITY_IDS,
+)
 from cleanup import (
     VACANT_NAME,
     invert_last_first,
@@ -574,6 +580,14 @@ def _planning_hub_links(base, root_html):
 
 async def find_boza_page(county):
     """Return (base_url, boza_url, html). base_url is set whenever a root loads."""
+    # Locked counties: official roster page only — never homepage nav.
+    for known in LOCKED_ROSTER_URLS.get(county, []):
+        html = await fetch(known, allow_render=True)
+        if html:
+            parsed = urlparse(known)
+            base = f"{parsed.scheme}://{parsed.netloc}"
+            return base, known, html
+
     # 0. Known county-specific BZA URLs (highest precision).
     for known in KNOWN_BOZA_URLS.get(county, []):
         html = await fetch(known, allow_render=True)
@@ -656,6 +670,7 @@ _NON_PERSON_WORDS = {
     "councilmember", "councilman", "councilwoman", "subcommittee", "workshop",
     "ceremony", "hearing", "budget", "recreation", "nuisance", "codes",
     "directory", "staff", "position", "term", "fire", "arts", "homes",
+    "business", "election", "officers", "powers", "duties",
 }
 
 
@@ -1525,6 +1540,21 @@ def _table_under_bza_heading(table):
     return True
 
 
+def parse_locked_roster_tables(html, county):
+    """Sitting roster from official tables only — no nav / full-text heuristics."""
+    members = []
+    if not html:
+        return members
+    soup = _soup(html)
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    for table in soup.find_all("table"):
+        if _table_is_non_bza_board(table):
+            continue
+        members.extend(_parse_table(table, county))
+    return members
+
+
 def parse_current_members(html, county):
     members = []
     if not html:
@@ -1667,6 +1697,7 @@ def _is_document_link(url, link_text):
     if (
         "viewfile" in low
         or "showpublisheddocument" in low
+        or "details.aspx" in low and ".pdf" in low
         or path.endswith(".pdf")
         or ".pdf?" in low
         or path.endswith(".docx")
@@ -1744,7 +1775,9 @@ def _is_minutes_document(url, link_text="", content=None):
             r"|were\s+present"
             r"|were\s+absent"
             r"|board members?\s*[–—:-].{0,200}?\bpresent\b"
+            r"|board members?\s*:"
             r"|minutes of the meeting"
+            r"|meeting minutes"
             r"|members?\s+present"
             r"|summary of .{0,40}meeting",
             content[:3500],
@@ -1884,16 +1917,11 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
     if not html:
         return docs
     soup = _soup(html)
-    for a in soup.find_all("a", href=True):
-        full = urljoin(base, a["href"])
-        link_text = a.get_text(" ", strip=True) or ""
-        # CivicPlus minutes icons often have empty visible text; aria-label helps.
-        if not link_text:
-            link_text = a.get("aria-label") or ""
+
+    def _add(full, link_text):
         if not _is_document_link(full, link_text) or full in seen:
-            continue
+            return
         full = _rewrite_revize_document_url(full)
-        # Never treat application/variance forms as minutes/agenda docs.
         blob_early = f"{full} {link_text}".lower()
         if any(
             bad in blob_early
@@ -1903,27 +1931,28 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
                 "variance-request", "petition-form",
             )
         ):
-            continue
+            return
         if not _is_minutes_document(full, link_text):
-            # Keep cryptic CivicPlus ViewFile / unlabeled PDFs on BZA pages.
             if not (
                 _is_minutes_link(full, link_text)
                 or "viewfile" in full.lower()
-                or (assume_bza and full.lower().endswith(".pdf"))
+                or "details.aspx" in full.lower()
+                or (assume_bza and (full.lower().endswith(".pdf") or ".pdf" in full.lower()))
             ):
-                continue
+                return
         blob = f"{full} {link_text}".lower()
-        # Umbrella Planning categories mix BZA with Planning Commission packets.
         if "planning commission" in blob and "appeal" not in blob:
-            continue
+            return
         if re.search(r"\bacpc\b", blob) and "appeal" not in blob:
-            continue
+            return
         on_bza_path = "zoning" in full.lower() and (
             "appeal" in full.lower() or "board_of_appeals" in full.lower()
         )
         labeled_bza = (
             ("zoning" in blob and "appeal" in blob)
             or re.search(r"\bbza\b", blob) is not None
+            or "bzaagendas" in blob
+            or "bza-minutes" in blob
             or "board of zoning" in blob
             or "land management board of appeals" in blob
             or (
@@ -1938,9 +1967,7 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
             )
         )
         if not (assume_bza or on_bza_path or labeled_bza):
-            continue
-        # Even on assume_bza umbrella pages, require a BZA cue when the link
-        # clearly belongs to another board.
+            return
         if assume_bza and not (on_bza_path or labeled_bza):
             if any(
                 x in blob
@@ -1950,15 +1977,28 @@ def _collect_docs_from_html(base, html, seen, assume_bza=False):
                     "county council", "voter registration",
                 )
             ):
-                continue
+                return
         year = _doc_year(full, link_text)
         seen.add(full)
         docs.append({
             "url": full,
             "text": link_text,
             "year": year,
-            "is_minutes": _is_minutes_link(full, link_text),
+            "is_minutes": _is_minutes_link(full, link_text) or "minutes" in blob,
         })
+
+    for a in soup.find_all("a", href=True):
+        full = urljoin(base, a["href"])
+        link_text = a.get_text(" ", strip=True) or ""
+        if not link_text:
+            link_text = a.get("aria-label") or ""
+        _add(full, link_text)
+    # Charleston BZA minutes live in <select><option value="...pdf">.
+    for opt in soup.find_all("option", value=True):
+        val = (opt.get("value") or "").strip()
+        if not val or val.startswith("#") or val in {"0", "-1"}:
+            continue
+        _add(urljoin(base, val), opt.get_text(" ", strip=True) or "")
     return docs
 
 
@@ -2580,7 +2620,7 @@ def _attendance_header(text):
     if m:
         window = text[m.start() : m.start() + 3000]
         cut = re.search(
-            r"(?i)\b(also\s+present|staff\s+present|staff\s*:|"
+            r"(?i)\b(also\s+present|staff\s+members?\s+present|staff\s+present|staff\s*:|"
             r"recognition of visitors|approval of (?:the\s+)?minutes|"
             r"new business|old business|adjournment)\b",
             window,
@@ -2698,6 +2738,57 @@ def _parse_attendance_names_flat(section):
     return out
 
 
+def _parse_numbered_board_members_attendance(text):
+    """Greenville minutes: 'Board Members:\\n1. Godfrey, Laura – Chairwoman'."""
+    if not text:
+        return []
+    m = re.search(
+        r"(?is)board members?\s*:?\s*\n((?:\s*\d+\.\s+.+\n?){3,})",
+        text[:4000],
+    )
+    if not m:
+        return []
+    block = re.split(
+        r"(?i)\n\s*(?:staff|new business|old business|call to order|"
+        r"approval of|election of officers)",
+        m.group(1),
+    )[0]
+    out = []
+    seen = set()
+    for line in block.splitlines():
+        line = line.strip()
+        mm = re.match(r"^\d+\.\s+(.+)$", line)
+        if not mm:
+            continue
+        raw = mm.group(1).strip()
+        attendance = "absent" if re.search(r"(?i)\babsent\b", raw) else "present"
+        raw = re.sub(
+            r"(?i)\s*[–—-]\s*(?:Vice[-\s]?Chair(?:man|woman)?|Chair(?:man|woman|person)?|"
+            r"Absent|Arrived\b.*)\s*$",
+            "",
+            raw,
+        )
+        raw = raw.strip(" \t-–—,")
+        if "," in raw:
+            last, first = [p.strip() for p in raw.split(",", 1)]
+            first = re.sub(
+                r"(?i)\s+\b(?:Member|Chairman|Chairwoman|Chairperson|Chair|Vice)\b.*$",
+                "",
+                first,
+            ).strip()
+            name = _title_case_name(f"{first} {last}".strip())
+        else:
+            name = _title_case_name(raw)
+        if not _is_person(name):
+            continue
+        key = _norm_name_key(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append({"name": name, "attendance": attendance})
+    return out
+
+
 def parse_minutes_attendance(text):
     """Deterministically parse BZA Members Present/Absent from minutes text.
 
@@ -2714,6 +2805,10 @@ def parse_minutes_attendance(text):
         Seven board members –Mr. A, Mr. B were present. Mr. C were absent.
     Returns a list of {name, attendance} dicts (attendance = present|absent|unknown).
     """
+    numbered = _parse_numbered_board_members_attendance(text)
+    if numbered:
+        return numbered
+
     head = _attendance_header(text)
     if not head:
         return []
@@ -2955,14 +3050,17 @@ def parse_roster_from_text(text, county):
     return members
 
 
-def attendance_extract(county, documents, roster_keys=None):
+def attendance_extract(county, documents, roster_keys=None, roster_locked=False):
     """Build member rows from attendance headers across dated minutes.
 
     documents: iterable of (text, source_year)
     Members not on the Stage-1 roster are marked historical. Appearance years
     stay in tenure only — they are not appointment terms.
+    When roster_locked is True, recent attendance never promotes a non-roster
+    name to sitting (official board pages are the sitting source of truth).
     """
     roster_keys = roster_keys or set()
+    staff_keys = COUNTY_STAFF_EXCLUDE.get(county, set())
     # Accumulate min/max year and best name spelling per identity key.
     acc = {}
     for text, year in documents:
@@ -2982,7 +3080,7 @@ def attendance_extract(county, documents, roster_keys=None):
             if not _is_person(name):
                 continue
             key = _norm_name_key(name)
-            if not key:
+            if not key or key in staff_keys:
                 continue
             slot = acc.get(key)
             if slot is None:
@@ -3007,7 +3105,11 @@ def attendance_extract(county, documents, roster_keys=None):
         # Still appearing in this year or last year's minutes → sitting
         # (rosters lag; Nov 2025 minutes are still the current board in 2026).
         # Absent-from-one-meeting is not a term-out.
-        if on_roster or (years and years[-1] >= CURRENT_YEAR - 1):
+        if on_roster:
+            status = "sitting"
+        elif roster_locked:
+            status = "historical"
+        elif years and years[-1] >= CURRENT_YEAR - 1:
             status = "sitting"
         else:
             status = "historical"
@@ -3201,10 +3303,95 @@ def llm_extract(county, documents, known=None):
 semaphore = asyncio.Semaphore(MAX_CONCURRENT)
 
 
+async def find_locked_minutes_docs(county):
+    """Collect minutes from curated indexes only — no homepage crawl."""
+    seen_pages = set()
+    index_urls = list(LOCKED_MINUTES_INDEX_URLS.get(county, []))
+    for known in KNOWN_BOZA_URLS.get(county, []):
+        if _is_binary_roster_url(known) or known in index_urls:
+            continue
+        if re.search(r"(?i)minute|agenda|directorylisting", known):
+            index_urls.append(known)
+    pages = []
+    for url in index_urls:
+        if url in seen_pages:
+            continue
+        seen_pages.add(url)
+        html = await fetch(url, allow_render=True)
+        if not html:
+            continue
+        pages.append((url, html))
+        soup = _soup(html)
+        for a in soup.find_all("a", href=True):
+            target = urljoin(url, a["href"])
+            if "DirectoryListingGC/Default.aspx" not in target:
+                continue
+            if "d=BZAAgendas" not in target or target in seen_pages:
+                continue
+            seen_pages.add(target)
+            folder_html = await fetch(target, allow_render=True)
+            if folder_html:
+                pages.append((target, folder_html))
+
+    seen_docs = set()
+    docs = []
+    for url, html in pages:
+        docs.extend(_collect_docs_from_html(url, html, seen_docs, assume_bza=True))
+    for known in KNOWN_BOZA_URLS.get(county, []):
+        if _is_binary_roster_url(known) and known not in seen_docs:
+            docs.append({
+                "url": known,
+                "text": known,
+                "year": _doc_year(known),
+                "is_minutes": True,
+            })
+            seen_docs.add(known)
+    return _sample_docs_across_years(docs)
+
+
+async def process_locked_county(county):
+    """Official roster tables + minutes attendance. No homepage / LLM junk."""
+    members = []
+    for url in LOCKED_ROSTER_URLS.get(county, []):
+        html = await fetch(url, allow_render=True)
+        if html:
+            members.extend(parse_locked_roster_tables(html, county))
+    roster_keys = {
+        _norm_name_key(m["name"])
+        for m in members
+        if m.get("name") and (m.get("status") or "") != "vacant"
+    }
+    docs = await find_locked_minutes_docs(county)
+    attendance_docs = []
+    scanned = 0
+    seen = set()
+    for doc in docs:
+        if scanned >= MAX_DOCS_SCAN:
+            break
+        scanned += 1
+        url = doc["url"]
+        if url in seen:
+            continue
+        seen.add(url)
+        content = await fetch_document(url)
+        if not content or not _content_is_minutes(content):
+            continue
+        attendance_docs.append((content, doc.get("year")))
+    if attendance_docs:
+        members.extend(
+            attendance_extract(
+                county, attendance_docs, roster_keys, roster_locked=True
+            )
+        )
+    return members
+
+
 async def process_county(county):
     async with semaphore:
         members = []
         try:
+            if county in LOCKED_ROSTER_URLS:
+                return county, await process_locked_county(county)
             # MatchBoard sitting rosters (Clarendon, Darlington, …).
             members.extend(await fetch_matchboard_members(county))
             # Phase 3

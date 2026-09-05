@@ -20,7 +20,7 @@ _SC_ZIP_RE = re.compile(
     r"\b[A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+)*,?\s+SC\s+\d{5}(?:-\d{4})?\b"
 )
 _LAST_FIRST_RE = re.compile(
-    r"^([A-Z][A-Za-z.'\-]+),\s+([A-Z][A-Za-z.'\-]+(?:\s+[A-Z]\.?)?)\s*$"
+    r"^([A-Z][A-Za-z.'\-]+),\s+([A-Z][A-Za-z.'\-]*(?:\s+[A-Z][A-Za-z.'\-]*){0,2})\s*$"
 )
 
 
@@ -55,14 +55,29 @@ def invert_name_from_tenure(name, tenure):
     if not name or not tenure:
         return name
     first_line = tenure.strip().splitlines()[0].strip()
-    # 'Baisch, Gregory January 2012...' or 'Baisch, Gregory'
-    m = re.match(
-        r"^([A-Z][A-Za-z.'\-]+),\s+([A-Z][A-Za-z.'\-]+(?:\s+[A-Z]\.)?)",
-        first_line,
-    )
+    # 'Baisch, Gregory January 2012...' or 'Nelson, G. Ross Member...'
+    m = re.match(r"^([A-Z][A-Za-z.'\-]+),\s+(.+)$", first_line)
     if not m:
         return name
-    last, first = m.group(1), m.group(2)
+    last = m.group(1)
+    stop = {
+        "member", "chairman", "chairwoman", "chairperson", "chair", "active",
+        "district", "vice", "term", "january", "february", "march", "april",
+        "may", "june", "july", "august", "september", "october", "november",
+        "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep",
+        "sept", "oct", "nov", "dec",
+    }
+    given = []
+    for tok in m.group(2).split()[:3]:
+        bare = tok.strip(".,").lower()
+        if not bare or bare.isdigit() or bare in stop:
+            break
+        if not re.match(r"^[A-Z](?:\.|[A-Za-z.'\-]+)$", tok):
+            break
+        given.append(tok)
+    first = " ".join(given)
+    if not first:
+        return name
     inverted = f"{first} {last}"
     compact = re.sub(r"\s+", " ", name).strip()
     if compact.lower() == inverted.lower():
@@ -71,6 +86,11 @@ def invert_name_from_tenure(name, tenure):
         return inverted
     if compact.lower().startswith(last.lower()) and first.split()[0].lower() in compact.lower():
         return inverted
+    # eScribe short form "G. Nelson" vs "G. Ross Nelson"
+    if compact.lower().endswith(" " + last.lower()):
+        given = compact[: -(len(last) + 1)].strip().lower().rstrip(".")
+        if given and first.lower().startswith(given):
+            return inverted
     return name
 
 
