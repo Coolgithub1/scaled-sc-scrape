@@ -1,0 +1,272 @@
+[
+  {
+    "rank": 63,
+    "company": "Mungo Homes",
+    "to": "customerservice@mungo.com",
+    "subject": "Mungo and a US county BZA corpus",
+    "body": "Hi there,\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher.\n\nCounty board makeup affects variances and community approvals across SC.\n\nI've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist. I'm scaling the same pipeline to all US counties.\n\nHappy to send a sample if this interests you. Just say the word.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "SC homebuilder",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 64,
+    "company": "D.R. Horton",
+    "to": "CorporateCustomerCare@drhorton.com",
+    "subject": "structured zoning-board members for D.R. Horton",
+    "body": "Good afternoon,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nSitting vs historic members help when you are opening SC communities.\n\nIf this interests you at all, let me know and I'll send a sample.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Homebuilder",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 68,
+    "company": "Crescent Communities",
+    "to": "info@crescentcommunities.com",
+    "subject": "quick note for Crescent on county BZA data",
+    "body": "Hello,\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher. I've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist.\n\nI'm scaling the same pipeline to all US counties.\n\nA clean board list is useful before a special exception or variance. Let me know if this interests you and I can send a sample.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Developer",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 69,
+    "company": "EDENS",
+    "to": "aparker@edens.com",
+    "subject": "EDENS / who sits on the SC appeals board",
+    "body": "Hi there,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nTenant uses often need a special exception. This is the board that hears it.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nIf you'd like to see it, let me know and I'll send a sample.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Retail developer",
+    "inbox_type": "local_ops"
+  },
+  {
+    "rank": 70,
+    "company": "RealtyLink",
+    "to": "marketing@realtylinkdev.com",
+    "subject": "South Carolina BOZA members, note for RealtyLink",
+    "body": "Good afternoon,\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher.\n\nOver the last stretch I built a South Carolina county zoning-appeals board member index, current and historical. After SC, the same method is going nationwide, county by county.\n\nThis is a civic overlay your SC research users do not get from parcel or comps data alone.\n\nIf this is relevant, let me know and I can send a sample over.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "SC developer",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 71,
+    "company": "The Beach Company",
+    "to": "brewerton@thebeachcompany.com",
+    "subject": "The Beach Company and a US county BZA corpus",
+    "body": "Hello \u2014\n\nMy name is Adam Natsheh. I'm a data scientist and AI/ML researcher. I assembled a structured directory of South Carolina county Board of Zoning Appeals members, including sitting and historic names.\n\nI'm now expanding that to every county in the United States.\n\nFor SC diligence, knowing the appeals board is a useful join on top of property records. Happy to send a sample if this interests you. Just say the word.\n\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "SC developer",
+    "inbox_type": "named"
+  },
+  {
+    "rank": 72,
+    "company": "Childress Klein",
+    "to": "charlotte@childressklein.com",
+    "subject": "structured zoning-board members for Childress Klein",
+    "body": "Hi \u2014\n\nI'm Adam Natsheh, a data scientist and AI/ML researcher.\n\nA clean board list is useful before a special exception or variance.\n\nI recently finished a clean roster of South Carolina county zoning appeals board members, both current and former. The next build is a nationwide corpus: every US county, sitting and historic members.\n\nIf this interests you at all, let me know and I'll send a sample.\n\nThanks,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Developer",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 73,
+    "company": "Quest Site Solutions",
+    "to": "info@questsitesolutions.com",
+    "subject": "Quest: SC zoning appeals board members",
+    "body": "Hi,\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher.\n\nI've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist. I'm scaling the same pipeline to all US counties.\n\nProspects ask how local approvals work. This is the BZA roster layer.\n\nIf this interests you, let me know and I can send a sample.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Site selection",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 74,
+    "company": "NAI Earle Furman",
+    "to": "jgood@naiearlefurman.com",
+    "subject": "county BZA roster that may fit NAI Earle Furman",
+    "body": "Hello,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher. I have a structured SC county BZA/BOZA member file covering sitting members and historic ones.\n\nA full US county corpus is what I'm producing next.\n\nA local board roster is a simple differentiator on SC land deals. If this is useful, let me know and I'll send a sample.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "CRE brokerage",
+    "inbox_type": "local_ops"
+  },
+  {
+    "rank": 75,
+    "company": "CBRE",
+    "to": "charles.carmody@cbre.com",
+    "subject": "sitting and historic zoning board names (CBRE)",
+    "body": "Hi there,\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher.\n\nBrokers get asked who can grant a variance. This answers that for SC counties.\n\nOver the last stretch I built a South Carolina county zoning-appeals board member index, current and historical. After SC, the same method is going nationwide, county by county.\n\nIf this interests you, I can send a sample. Just let me know.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "CRE brokerage",
+    "inbox_type": "local_ops"
+  },
+  {
+    "rank": 77,
+    "company": "Colliers",
+    "to": "Bryan.Welch@colliers.com",
+    "subject": "Colliers / who sits on the SC appeals board",
+    "body": "Hello \u2014\n\nI'm Adam Natsheh, a data scientist and AI/ML researcher. I recently finished a clean roster of South Carolina county zoning appeals board members, both current and former.\n\nThe next build is a nationwide corpus: every US county, sitting and historic members.\n\nBrokers get asked who can grant a variance. This answers that for SC counties. If you'd like to see it, let me know and I'll send a sample.\n\nThanks,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "CRE brokerage",
+    "inbox_type": "named"
+  },
+  {
+    "rank": 79,
+    "company": "Stewart Title",
+    "to": "agencyservices@stewart.com",
+    "subject": "Stewart and a US county BZA corpus",
+    "body": "Hi,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nAppeals-board identity is a leftover land-use risk signal in diligence.\n\nHappy to send a sample if this interests you. Just say the word.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Title insurance",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 81,
+    "company": "Investors Title",
+    "to": "corporate@invtitle.com",
+    "subject": "Investors Title: SC zoning appeals board members",
+    "body": "Hi there,\n\nMy name is Adam Natsheh. I'm a data scientist and AI/ML researcher.\n\nAppeals-board identity is a leftover land-use risk signal in diligence.\n\nI assembled a structured directory of South Carolina county Board of Zoning Appeals members, including sitting and historic names. I'm now expanding that to every county in the United States.\n\nIf this interests you, let me know and I can send a sample.\n\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Title insurance",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 83,
+    "company": "Yardi Systems",
+    "to": "jason.spencer@yardi.com",
+    "subject": "sitting and historic zoning board names (Yardi)",
+    "body": "Hello \u2014\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher. I've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist.\n\nI'm scaling the same pipeline to all US counties.\n\nDevelopment modules get better with local-board context. If this interests you, I can send a sample. Just let me know.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "PropTech",
+    "inbox_type": "named"
+  },
+  {
+    "rank": 84,
+    "company": "RealPage",
+    "to": "katherine.thomas@realpage.com",
+    "subject": "quick note for RealPage on county BZA data",
+    "body": "Hi \u2014\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nCounty approval bodies matter when a new community is entitled.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nLet me know if this interests you and I can send a sample.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "PropTech",
+    "inbox_type": "named"
+  },
+  {
+    "rank": 85,
+    "company": "STR",
+    "to": "info@str.com",
+    "subject": "STR / who sits on the SC appeals board",
+    "body": "Hi,\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher.\n\nOver the last stretch I built a South Carolina county zoning-appeals board member index, current and historical. After SC, the same method is going nationwide, county by county.\n\nThis is a civic overlay your SC research users do not get from parcel or comps data alone.\n\nIf you'd like to see it, let me know and I'll send a sample.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "CRE data",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 86,
+    "company": "ALN Apartment Data",
+    "to": "patrick@alndata.com",
+    "subject": "South Carolina BOZA members, note for ALN",
+    "body": "Hello,\n\nMy name is Adam Natsheh. I'm a data scientist and AI/ML researcher. I assembled a structured directory of South Carolina county Board of Zoning Appeals members, including sitting and historic names.\n\nI'm now expanding that to every county in the United States.\n\nFor SC diligence, knowing the appeals board is a useful join on top of property records. If this is relevant, let me know and I can send a sample over.\n\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "CRE data",
+    "inbox_type": "named"
+  },
+  {
+    "rank": 87,
+    "company": "Moody's CRE",
+    "to": "CRESupport@moodys.com",
+    "subject": "Moody's CRE and a US county BZA corpus",
+    "body": "Hi there,\n\nI'm Adam Natsheh, a data scientist and AI/ML researcher.\n\nLocal approval-body data is a development-risk feature.\n\nI recently finished a clean roster of South Carolina county zoning appeals board members, both current and former. The next build is a nationwide corpus: every US county, sitting and historic members.\n\nHappy to send a sample if this interests you. Just say the word.\n\nThanks,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "CRE analytics",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 88,
+    "company": "Upstate SC Alliance",
+    "to": "development@upstatealliance.com",
+    "subject": "structured zoning-board members for Upstate Alliance",
+    "body": "Good afternoon,\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher.\n\nI've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist. I'm scaling the same pipeline to all US counties.\n\nA county member list is a ready research tool for site visits.\n\nIf this interests you at all, let me know and I'll send a sample.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Economic development",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 89,
+    "company": "Charleston Regional Development Alliance",
+    "to": "alliance@crda.org",
+    "subject": "CRDA: SC zoning appeals board members",
+    "body": "Hello \u2014\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher. I have a structured SC county BZA/BOZA member file covering sitting members and historic ones.\n\nA full US county corpus is what I'm producing next.\n\nProspects ask how local boards work. This is the BZA roster, starting with SC. If this interests you, let me know and I can send a sample.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Economic development",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 90,
+    "company": "Central SC Alliance",
+    "to": "csca@centralsc.org",
+    "subject": "county BZA roster that may fit Central SC Alliance",
+    "body": "Hi \u2014\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher.\n\nA county member list is a ready research tool for site visits.\n\nOver the last stretch I built a South Carolina county zoning-appeals board member index, current and historical. After SC, the same method is going nationwide, county by county.\n\nIf this is useful, let me know and I'll send a sample.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "Economic development",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 91,
+    "company": "Myrtle Beach Regional EDC",
+    "to": "info@mbredc.org",
+    "subject": "sitting and historic zoning board names (Myrtle Beach EDC)",
+    "body": "Hi,\n\nMy name is Adam Natsheh. I'm a data scientist and AI/ML researcher.\n\nI assembled a structured directory of South Carolina county Board of Zoning Appeals members, including sitting and historic names. I'm now expanding that to every county in the United States.\n\nProspects ask how local boards work. This is the BZA roster, starting with SC.\n\nIf this interests you, I can send a sample. Just let me know.\n\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Economic development",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 92,
+    "company": "South Carolina Department of Commerce",
+    "to": "info@sccommerce.com",
+    "subject": "quick note for SC Commerce on county BZA data",
+    "body": "Hello,\n\nI'm Adam Natsheh, a data scientist and AI/ML researcher. I recently finished a clean roster of South Carolina county zoning appeals board members, both current and former.\n\nThe next build is a nationwide corpus: every US county, sitting and historic members.\n\nA county member list is a ready research tool for site visits. Let me know if this interests you and I can send a sample.\n\nThanks,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Economic development",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 94,
+    "company": "Avison Young",
+    "to": "chris.fraser@avisonyoung.com",
+    "subject": "South Carolina BOZA members, note for Avison Young",
+    "body": "Good afternoon,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nA local board roster is a simple differentiator on SC land deals.\n\nIf this is relevant, let me know and I can send a sample over.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "CRE brokerage",
+    "inbox_type": "local_ops"
+  },
+  {
+    "rank": 95,
+    "company": "Home Builders Association of South Carolina",
+    "to": "info@hbaofsc.com",
+    "subject": "HBA of SC and a US county BZA corpus",
+    "body": "Hello \u2014\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher. Over the last stretch I built a South Carolina county zoning-appeals board member index, current and historical.\n\nAfter SC, the same method is going nationwide, county by county.\n\nYour members deal with variances all the time. This is the county roster. Happy to send a sample if this interests you. Just say the word.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "SC trade group",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 96,
+    "company": "Urban Land Institute",
+    "to": "customerservice@uli.org",
+    "subject": "structured zoning-board members for ULI",
+    "body": "Hi \u2014\n\nMy name is Adam Natsheh. I'm a data scientist and AI/ML researcher.\n\nA BZA directory is a research product your members could use.\n\nI assembled a structured directory of South Carolina county Board of Zoning Appeals members, including sitting and historic names. I'm now expanding that to every county in the United States.\n\nIf this interests you at all, let me know and I'll send a sample.\n\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Industry association",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 97,
+    "company": "National Association of Home Builders",
+    "to": "info@nahb.org",
+    "subject": "NAHB: SC zoning appeals board members",
+    "body": "Hi,\n\nI'm Adam Natsheh, a data scientist and AI/ML researcher.\n\nI recently finished a clean roster of South Carolina county zoning appeals board members, both current and former. The next build is a nationwide corpus: every US county, sitting and historic members.\n\nMembers keep asking who decides local housing approvals. This is that layer for SC.\n\nIf this interests you, let me know and I can send a sample.\n\nThanks,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Industry association",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 98,
+    "company": "Great Southern Homes",
+    "to": "info@greatsouthernhomes.com",
+    "subject": "county BZA roster that may fit Great Southern",
+    "body": "Hello,\n\nThis is Adam Natsheh. I work as a data scientist and AI/ML researcher. I've been compiling who sits on South Carolina county Boards of Zoning Appeals, plus historic members where minutes exist.\n\nI'm scaling the same pipeline to all US counties.\n\nBefore you open a community, this is who is actually on the county board. If this is useful, let me know and I'll send a sample.\n\nBest,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "SC homebuilder",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 99,
+    "company": "LegiStorm",
+    "to": "congress@legistorm.com",
+    "subject": "sitting and historic zoning board names (LegiStorm)",
+    "body": "Hi there,\n\nAdam Natsheh here. I'm a data scientist and AI/ML researcher.\n\nCounty BZA members are a local-official expansion set beside your usual coverage.\n\nI have a structured SC county BZA/BOZA member file covering sitting members and historic ones. A full US county corpus is what I'm producing next.\n\nIf this interests you, I can send a sample. Just let me know.\n\nRegards,\nAdam Natsheh\nData Scientist and AI/ML Researcher",
+    "segment": "Officials data",
+    "inbox_type": "company"
+  },
+  {
+    "rank": 100,
+    "company": "American Planning Association",
+    "to": "customerservice@planning.org",
+    "subject": "quick note for APA on county BZA data",
+    "body": "Good afternoon,\n\nI wanted to introduce myself: Adam Natsheh, data scientist and AI/ML researcher.\n\nOver the last stretch I built a South Carolina county zoning-appeals board member index, current and historical. After SC, the same method is going nationwide, county by county.\n\nI thought APA members might want a structured BZA roster to start with.\n\nLet me know if this interests you and I can send a sample.\n\nAdam Natsheh\nData scientist and AI/ML researcher",
+    "segment": "Planning association",
+    "inbox_type": "company"
+  }
+]
