@@ -33,7 +33,7 @@ Honestly marked, not invented:
 
 Still open:
 
-- Historic minutes still missing for most counties, including Spartanburg. Re-run `python main.py --county Spartanburg` (and others) with the new caps to fill that.
+- Historic minutes still missing for most sitting-only counties. Spartanburg is filled (20 former members). Blind re-scrapes of Charleston/Greenville pulled nav junk, not former members; those two were restored. Other counties need real minutes-archive URLs before another crawl.
 - Georgetown MatchBoard expirations from March 2025 still need a live re-pull.
 - McCormick fifth member is unpublished.
 
