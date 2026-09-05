@@ -38,6 +38,13 @@ from config import (
 from counties import COUNTIES
 from cache import cache
 from county_sources import KNOWN_BOZA_URLS, MATCHBOARD_ENTITY_IDS
+from cleanup import (
+    VACANT_NAME,
+    invert_last_first,
+    invert_name_from_tenure,
+    is_attendance_only_tenure,
+    sanitize_tenure,
+)
 
 CURRENT_YEAR = datetime.now().year
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -786,6 +793,20 @@ def _years_from_dates(text):
     return years
 
 
+def _vacant_member(county, seat_label):
+    return {
+        "state": STATE,
+        "county": county,
+        "name": VACANT_NAME,
+        "status": "vacant",
+        "term_start": None,
+        "term_end": None,
+        "gender": None,
+        "tenure": sanitize_tenure(seat_label) or seat_label,
+        "_from_roster": True,
+    }
+
+
 def _member(county, name, status, term_start, term_end, tenure):
     return {
         "state": STATE,
@@ -795,7 +816,7 @@ def _member(county, name, status, term_start, term_end, tenure):
         "term_start": term_start,
         "term_end": term_end,
         "gender": None,
-        "tenure": tenure,
+        "tenure": sanitize_tenure(tenure),
         "_from_roster": True,
     }
 
@@ -854,16 +875,14 @@ def _parse_table(table, county):
         if not cells:
             continue
         rowtext = " ".join(cells)
-        # Skip vacant seats.
-        if re.search(r"(?i)\bvacant\b", rowtext) and not re.search(r"[A-Z][a-z]+", rowtext):
-            continue
-        if rowtext.strip().lower() in ("vacant",):
-            continue
         if first_i is not None and last_i is not None and first_i < len(cells) and last_i < len(cells):
             name_src = f"{cells[first_i]} {cells[last_i]}".strip()
         else:
             name_src = cells[name_i] if (name_i is not None and name_i < len(cells)) else rowtext
-        if re.search(r"(?i)^\s*vacant\s*$", name_src or ""):
+        if re.search(r"(?i)\bvacant\b", name_src or "") or (
+            re.search(r"(?i)\bvacant\b", rowtext) and not re.search(r"[A-Z][a-z]{2,}", name_src or "")
+        ):
+            out.append(_vacant_member(county, rowtext[:200] or "Vacant seat"))
             continue
         name = _clean_name(name_src)
         if not name:
@@ -873,6 +892,9 @@ def _parse_table(table, county):
                 name = _title_case_name(f"{m.group(2)} {m.group(1)}")
                 if not _is_person(name):
                     name = None
+        if name:
+            name = invert_last_first(name)
+            name = invert_name_from_tenure(name, name_src)
         if not name:
             continue
 
@@ -946,6 +968,7 @@ def _parse_current_members_block(text, county):
             continue
         raw = lines[0]
         if re.search(r"(?i)^\s*vacant\s*$", raw):
+            out.append(_vacant_member(county, " ".join(lines)[:200] or "Vacant seat"))
             continue
         name = _clean_name(raw) or (
             _title_case_name(raw) if _is_person(_title_case_name(raw)) else None
@@ -967,9 +990,24 @@ def _parse_current_members_block(text, county):
     return out
 
 
+def _drop_leading_planning_commission(text):
+    """On combined pages, keep only the BZA table that follows Planning Commission."""
+    if not text or not re.search(r"(?i)planning commission", text):
+        return text
+    m = re.search(
+        r"(?is)(?:board of zoning appeals|zoning board of appeals)\s*"
+        r"(?:\n+\s*zoning district)?\s*\n",
+        text,
+    )
+    if m and re.search(r"(?i)planning commission", text[: m.start()]):
+        return text[m.start() :]
+    return text
+
+
 def _parse_district_roster_text(text, county):
     """Chester/Calhoun-style: District N \\n Name \\n Appointment Ends: MM-YYYY."""
     out = []
+    text = _drop_leading_planning_commission(text)
     # Prefer the Board of Zoning Appeals section that actually contains district
     # rows. Early nav text like "Agendas + Minutes" must not truncate the roster.
     bza = None
@@ -995,6 +1033,7 @@ def _parse_district_roster_text(text, county):
     for m in pattern.finditer(scope):
         raw_name = m.group(1).strip()
         if re.search(r"(?i)^\s*vacant\s*$", raw_name):
+            out.append(_vacant_member(county, m.group(0)[:200]))
             continue
         name = _clean_name(raw_name) or (
             _title_case_name(re.sub(r"\s*\(.*\)\s*", " ", raw_name).strip())
@@ -1050,6 +1089,7 @@ def _parse_abbeville_board_table(text, county):
     ):
         raw = row.group(1).strip()
         if re.search(r"(?i)^\s*vacant\s*$", raw):
+            out.append(_vacant_member(county, f"{row.group(2)} vacant"))
             continue
         name = _clean_name(raw) or (
             _title_case_name(raw) if _is_person(_title_case_name(raw)) else None
@@ -1127,8 +1167,12 @@ def _parse_contacts_people_roster(soup, county):
         for li in lst.find_all("li", recursive=False):
             blob = li.get_text("\n", strip=True)
             h5 = li.find("h5")
+            h4 = li.find("h4")
             raw_name = h5.get_text(" ", strip=True) if h5 else ""
+            seat = h4.get_text(" ", strip=True) if h4 else ""
             if not raw_name or re.search(r"(?i)^\s*vacant\s*$", raw_name):
+                if seat or re.search(r"(?i)district|at\s*large|vacant", blob):
+                    out.append(_vacant_member(county, (seat or blob)[:200] or "Vacant seat"))
                 continue
             name = _clean_name(raw_name) or (
                 _title_case_name(raw_name) if _is_person(_title_case_name(raw_name)) else None
@@ -1249,6 +1293,7 @@ def _bza_scoped_text(text):
     """Prefer the Board of Zoning Appeals section on multi-board pages."""
     if not text:
         return text
+    text = _drop_leading_planning_commission(text)
     # Prefer an explicit "… Appeals Members" roster block when present
     # (Greenwood lists BZA early in nav copy, then the real roster later).
     members_block = re.search(
@@ -1399,7 +1444,12 @@ def _parse_card_title_roster(soup, county):
         return out
     for title in cards:
         raw = title.get_text(" ", strip=True)
-        if not raw or re.search(r"(?i)^\s*vacant\s*$", raw):
+        parent = title.find_parent(class_=re.compile(r"card"))
+        body = parent.get_text(" ", strip=True) if parent else raw
+        if not raw:
+            continue
+        if re.search(r"(?i)^\s*vacant\s*$", raw):
+            out.append(_vacant_member(county, body[:200] or "Vacant seat"))
             continue
         # Skip non-person card titles (section headers).
         if re.search(
@@ -1413,10 +1463,6 @@ def _parse_card_title_roster(soup, county):
         )
         if not name or not _is_person(name):
             continue
-        body = ""
-        parent = title.find_parent(class_=re.compile(r"card"))
-        if parent:
-            body = parent.get_text(" ", strip=True)
         # Prefer cards that look like board seats (district / chair / vice).
         if body and not re.search(
             r"(?i)district|chair|vice|member|at-?large", body
@@ -1426,6 +1472,22 @@ def _parse_card_title_roster(soup, county):
             pass
         out.append(_member(county, name, "sitting", None, None, (body or raw)[:200]))
     return out
+
+
+def _table_is_non_bza_board(table):
+    """True for Planning Commission (or similar) tables on a combined page."""
+    first = table.find("tr")
+    if not first:
+        return False
+    head = first.get_text(" ", strip=True)
+    if re.search(r"(?i)planning commission", head) and not re.search(
+        r"(?i)zoning appeals|board of zoning", head
+    ):
+        return True
+    caption = table.find("caption")
+    if caption and re.search(r"(?i)planning commission", caption.get_text(" ", strip=True)):
+        return True
+    return False
 
 
 def _table_under_bza_heading(table):
@@ -1471,7 +1533,14 @@ def parse_current_members(html, county):
         r"(?i)term of office", soup.get_text(" ", strip=True)
     )) >= 2
     for table in soup.find_all("table"):
+        if _table_is_non_bza_board(table):
+            continue
         if multi_board and not _table_under_bza_heading(table):
+            continue
+        # Combined PC + BZA pages (Calhoun): skip tables under Planning Commission.
+        if not _table_under_bza_heading(table) and re.search(
+            r"(?i)planning commission", soup.get_text(" ", strip=True)[:2000]
+        ):
             continue
         members.extend(_parse_table(table, county))
 
@@ -2881,8 +2950,8 @@ def attendance_extract(county, documents, roster_keys=None):
     """Build member rows from attendance headers across dated minutes.
 
     documents: iterable of (text, source_year)
-    Members not on the Stage-1 roster are marked historical; appearance years
-    become term_start/term_end so historic rows are not empty.
+    Members not on the Stage-1 roster are marked historical. Appearance years
+    stay in tenure only — they are not appointment terms.
     """
     roster_keys = roster_keys or set()
     # Accumulate min/max year and best name spelling per identity key.
@@ -2925,11 +2994,10 @@ def attendance_extract(county, documents, roster_keys=None):
     extracted = []
     for key, slot in acc.items():
         years = sorted(slot["years"])
-        term_start = str(years[0]) if years else None
-        term_end = str(years[-1]) if years else None
         on_roster = key in roster_keys
         # Still appearing in this year or last year's minutes → sitting
         # (rosters lag; Nov 2025 minutes are still the current board in 2026).
+        # Absent-from-one-meeting is not a term-out.
         if on_roster or (years and years[-1] >= CURRENT_YEAR - 1):
             status = "sitting"
         else:
@@ -2950,10 +3018,11 @@ def attendance_extract(county, documents, roster_keys=None):
             "county": county,
             "name": slot["name"],
             "status": status,
-            "term_start": term_start,
-            "term_end": term_end,
+            # Attendance years are not appointment terms.
+            "term_start": None,
+            "term_end": None,
             "gender": None,
-            "tenure": "; ".join(tenure_bits) if tenure_bits else None,
+            "tenure": sanitize_tenure("; ".join(tenure_bits) if tenure_bits else None),
             "_from_roster": False,
             "_from_attendance": True,
         })
@@ -3350,6 +3419,11 @@ def _first_initial(name):
 
 def _same_person(a, b):
     """Relaxed identity match (LocalGovPL §5.3.4): surname + initial, or fuzzy name."""
+    # Vacant seats are per-district, never merge two vacancies together.
+    a_vacant = (a.get("status") or "").lower() == "vacant" or (a.get("name") or "") == VACANT_NAME
+    b_vacant = (b.get("status") or "").lower() == "vacant" or (b.get("name") or "") == VACANT_NAME
+    if a_vacant or b_vacant:
+        return a_vacant and b_vacant and (a.get("tenure") or "") == (b.get("tenure") or "")
     ka, kb = _norm_name_key(a["name"]), _norm_name_key(b["name"])
     if not ka or not kb:
         return False
@@ -3403,15 +3477,31 @@ def _merge_members(base, other):
         other.get("_from_attendance")
     )
 
-    # Union attendance/roster years so historic rows keep a real span.
-    starts = [_year_value(base.get("term_start")), _year_value(other.get("term_start"))]
-    ends = [_year_value(base.get("term_end")), _year_value(other.get("term_end"))]
+    # Appointment years come from roster/official dates only.
+    # Attendance-only years stay in tenure, not term_start/term_end.
+    base_roster = bool(base.get("_from_roster"))
+    other_roster = bool(other.get("_from_roster"))
+    base_att = bool(base.get("_from_attendance")) and not base_roster
+    other_att = bool(other.get("_from_attendance")) and not other_roster
+    starts = []
+    ends = []
+    if not (base_att and not other_roster):
+        starts.append(_year_value(base.get("term_start")))
+        ends.append(_year_value(base.get("term_end")))
+    if not (other_att and not base_roster):
+        starts.append(_year_value(other.get("term_start")))
+        ends.append(_year_value(other.get("term_end")))
     starts = [y for y in starts if y]
     ends = [y for y in ends if y]
     if starts:
         merged["term_start"] = str(min(starts))
+    elif base_att and other_att:
+        merged["term_start"] = None
     if ends:
         merged["term_end"] = str(max(ends))
+    elif base_att and other_att:
+        merged["term_end"] = None
+    merged["tenure"] = sanitize_tenure(merged.get("tenure"))
 
     # Prefer tenure text that mentions minutes attendance when merging.
     b_ten, o_ten = base.get("tenure") or "", other.get("tenure") or ""
@@ -3497,6 +3587,17 @@ def augment_and_dedupe(all_members):
     for bucket in buckets.values():
         for member in bucket:
             name = member.get("name") or ""
+            if (member.get("status") or "").lower() == "vacant" or name == VACANT_NAME:
+                member["name"] = VACANT_NAME
+                member["status"] = "vacant"
+                member["gender"] = None
+                member["tenure"] = sanitize_tenure(member.get("tenure"))
+                member.pop("_from_roster", None)
+                member.pop("_from_attendance", None)
+                member.pop("place_of_birth", None)
+                member.pop("surname_origin", None)
+                final.append(member)
+                continue
             if name:
                 raw_gender = (member.get("gender") or "").strip().lower()
                 # Always normalize library/LLM codes; never leave `andy` in the CSV.
@@ -3504,6 +3605,10 @@ def augment_and_dedupe(all_members):
                     member["gender"] = _guess_gender(detector, name)
                 else:
                     member["gender"] = raw_gender
+            member["tenure"] = sanitize_tenure(member.get("tenure"))
+            if is_attendance_only_tenure(member.get("tenure") or "") and not member.get("_from_roster"):
+                member["term_start"] = None
+                member["term_end"] = None
             # Final status normalization from evidence (roster / term years).
             end = _year_value(member.get("term_end"))
             # Expired terms win over the roster flag (former-member pages),
@@ -3598,6 +3703,12 @@ async def main(counties=None):
     final = augment_and_dedupe(all_members)
 
     df = pd.DataFrame(final, columns=COLUMNS)
+    # A --county subset must not wipe the statewide CSV.
+    if os.path.exists(OUTPUT_CSV) and set(counties) != set(COUNTIES):
+        existing = pd.read_csv(OUTPUT_CSV, dtype=str).fillna("")
+        keep = existing[~existing["county"].isin(counties)]
+        df = pd.concat([keep, df], ignore_index=True)
+        df = df.sort_values(["county", "status", "name"], kind="stable")
     df.to_csv(OUTPUT_CSV, index=False)
 
     for county in counties:

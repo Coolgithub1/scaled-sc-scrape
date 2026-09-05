@@ -18,6 +18,6 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 # MAX_DOCS_KEEP: hard cap on documents fed to the LLM per county.
 # MAX_DOCS_SCAN: max document URLs to download/sniff per county.
 ARCHIVE_YEAR_FLOOR = 1990
-MAX_DOCS_PER_YEAR = 2
-MAX_DOCS_KEEP = 20
-MAX_DOCS_SCAN = 80
+MAX_DOCS_PER_YEAR = 8
+MAX_DOCS_KEEP = 80
+MAX_DOCS_SCAN = 200

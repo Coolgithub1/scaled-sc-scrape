@@ -38,6 +38,7 @@ KNOWN_BOZA_URLS = {
     "Charleston": [
         "https://www.charlestoncounty.gov/departments/zoning-planning/bza.php",
         "https://www.charlestoncounty.org/departments/zoning-planning/bza.php",
+        "https://bm-public-charlestoncounty.escribemeetings.com/BoardDetails/BoardInformation/28",
         # Meeting summaries host Members Present when no separate roster page exists.
         "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-MEETING.pdf",
         "https://www.charlestoncounty.gov/departments/zoning-planning/bza-agenda/DRAFT-SUMMARY-OF-MARCH-2-2026-BZA-ANNUAL-BUSINESS-MEETING.pdf",
@@ -164,7 +165,8 @@ KNOWN_BOZA_URLS = {
         "https://oconeesc.com/council-home/committees-and-commissions/boards-and-commissions/board-of-zoning-appeals",
     ],
     "Orangeburg": [
-        # MatchBoard sitting ZBA members (entity 38 / board 139).
+        "https://www.orangeburgcounty.org/200/Board-of-Zoning-Appeals",
+        # MatchBoard sitting ZBA members (entity 38 / board 139). first_name "Hebert" is OCR/typo.
         "https://api.matchboard.tech/app/boards/139",
     ],
     "Pickens": [
@@ -178,10 +180,13 @@ KNOWN_BOZA_URLS = {
         "https://www.richlandcountysc.gov/Government/Get-Involved/Boards-and-Committees/Board-of-Zoning-Appeals",
     ],
     "Saluda": [
+        "https://saludacounty.sc.gov/county-council",
+        "https://saludacounty.sc.gov/sites/saludacounty/files/Documents/Saluda%20County%20Boards%20%26%20Comm.%20List%208-12-2025.pdf",
         "https://saludacounty.sc.gov/departments/legislative-delegation",
     ],
     "Sumter": [
         "https://www.sumtersc.gov/planning/board-zoning-appeals",
+        "https://www.sumtersc.gov/sites/default/files/uploads/Departments/Planning/BoardsCommissions/PC/2026/April/sumter-chapter-a-draft-3.3-pc-presentation.pdf",
     ],
     "Spartanburg": [
         "https://www.spartanburgcounty.gov/371/Board-of-Zoning-Appeals",
@@ -211,4 +216,22 @@ MATCHBOARD_ENTITY_IDS = {
     "Greenwood": 24,
     "Kershaw": 28,
     "Orangeburg": 38,
+}
+
+# Honest coverage labels for counties that publish no BZA roster, or have no BZA.
+# Used by repair_csv.py / county_coverage.csv — do not invent members for these.
+COUNTY_COVERAGE_NOTES = {
+    "Allendale": "no_public_roster",
+    "Bamberg": "no_public_roster",  # ordinance creates a 5-member BZA; no names published
+    "Barnwell": "no_public_roster",
+    "Cherokee": "no_county_bza",  # county said it does not have zoning (2023); I-85 proposal pending
+    "Chesterfield": "no_public_roster",
+    "Dillon": "board_named_no_roster",
+    "Hampton": "not_zoning_bza",  # published Board of Adjustments and Appeals is building-codes
+    "Laurens": "no_county_bza",  # county has no zoning ordinance
+    "Lee": "no_public_roster",
+    "Marlboro": "no_public_roster",
+    "Saluda": "no_county_bza",  # official boards list has no BZA
+    "Union": "no_county_bza",  # no zoning; tax/building BOAs only
+    "Williamsburg": "no_county_bza",  # 2026 agenda requested creating a BZA; not established
 }
